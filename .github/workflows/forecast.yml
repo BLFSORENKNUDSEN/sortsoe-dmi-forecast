@@ -1,46 +1,20 @@
-name: Update Sortsoe forecast
+name: Test Sortsoe forecast fetch
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "scripts/**"
-      - ".github/workflows/forecast.yml"
-  schedule:
-    - cron: "13,43 * * * *"
   workflow_dispatch:
 
 permissions:
   contents: write
 
-concurrency:
-  group: sortsoe-forecast
-  cancel-in-progress: true
-
 jobs:
-  update:
+  test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
-      - name: Fetch DMI forecast
+      - name: Test DMI forecast fetch
         run: python scripts/fetch_forecast.py
-
-      - name: Commit changed forecast
-        run: |
-          if git diff --quiet -- data/sortsoe.json; then
-            echo "No forecast change"
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/sortsoe.json
-          git commit -m "Update Sortsoe DMI forecast"
-          git push
