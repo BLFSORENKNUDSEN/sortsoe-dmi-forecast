@@ -1,4 +1,4 @@
-name: Test Sortsoe STAC forecast
+name: Update Sortsoe STAC forecast
 
 on:
   workflow_dispatch:
@@ -6,15 +6,22 @@ on:
     branches:
       - main
     paths:
-      - "scripts/fetch_stac_probe.py"
+      - "scripts/fetch_stac_forecast.py"
       - ".github/workflows/forecast.yml"
+  schedule:
+    - cron: "25 2,5,8,11,14,17,20,23 * * *"
 
 permissions:
   contents: write
 
+concurrency:
+  group: sortsoe-stac-forecast
+  cancel-in-progress: true
+
 jobs:
-  test:
+  update:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,17 +38,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install eccodes
 
-      - name: Probe latest DMI HARMONIE GRIB
-        run: python scripts/fetch_stac_probe.py
+      - name: Build DMI HARMONIE forecast
+        run: python scripts/fetch_stac_forecast.py
 
-      - name: Commit probe JSON
+      - name: Commit forecast JSON
         run: |
-          if git diff --quiet -- data/stac_probe.json; then
-            echo "No probe change"
+          if [ -z "$(git status --porcelain -- data/sortsoe.json)" ]; then
+            echo "No forecast change"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/stac_probe.json
-          git commit -m "Update Sortsoe STAC probe"
+          git add data/sortsoe.json
+          git commit -m "Update Sortsoe STAC forecast"
           git push
