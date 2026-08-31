@@ -4,7 +4,10 @@ from __future__ import annotations
 import json
 import math
 import os
+import random
 import sys
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
@@ -17,6 +20,7 @@ LAT = float(os.getenv("SORTSOE_LAT", "54.9347"))
 LON = float(os.getenv("SORTSOE_LON", "11.9889"))
 TZ = ZoneInfo("Europe/Copenhagen")
 OUT = Path(os.getenv("FORECAST_OUT", "data/sortsoe.json"))
+MAX_RETRIES = int(os.getenv("DMI_MAX_RETRIES", "7"))
 
 PARAMETERS = [
     "temperature-2m",
@@ -38,9 +42,36 @@ PARAMETERS = [
 
 
 def fetch_json(url: str) -> dict:
-    req = urllib.request.Request(url, headers={"User-Agent": "strandvejr.dk DMI forecast fetcher/1.0"})
-    with urllib.request.urlopen(req, timeout=45) as r:
-        return json.load(r)
+    headers = {
+        "User-Agent": "strandvejr.dk DMI forecast fetcher/1.1",
+        "Accept": "application/geo+json, application/json",
+    }
+
+    for attempt in range(MAX_RETRIES + 1):
+        req = urllib.request.Request(url, headers=headers)
+        try:
+            with urllib.request.urlopen(req, timeout=60) as r:
+                return json.load(r)
+        except urllib.error.HTTPError as exc:
+            if exc.code != 429 or attempt >= MAX_RETRIES:
+                raise
+
+            retry_after = exc.headers.get("Retry-After")
+            try:
+                retry_seconds = float(retry_after) if retry_after else 0.0
+            except (TypeError, ValueError):
+                retry_seconds = 0.0
+
+            backoff = min(60.0, 5.0 * (2 ** attempt))
+            wait_seconds = max(retry_seconds, backoff) + random.uniform(1.0, 4.0)
+            print(
+                f"DMI returned HTTP 429. Retry {attempt + 1}/{MAX_RETRIES} "
+                f"in {wait_seconds:.1f} seconds.",
+                file=sys.stderr,
+            )
+            time.sleep(wait_seconds)
+
+    raise RuntimeError("DMI request failed after retries")
 
 
 def build_url() -> str:
@@ -229,7 +260,9 @@ def summarize_day(day, rows):
 
 
 def main():
-    data = fetch_json(build_url())
+    url = build_url()
+    print(f"Fetching DMI forecast for Sortsoe Strand from {BASE}")
+    data = fetch_json(url)
     features = data.get("features", [])
     rows = [r for r in (parse_step(f) for f in features) if r]
     rows.sort(key=lambda r: r["time"])
