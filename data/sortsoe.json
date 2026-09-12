@@ -17,8 +17,8 @@
     "collection": "harmonie_dini_sf",
     "modelRun": "2026-09-12T15:00:00Z",
     "intervalHours": 3,
-    "generated": "2026-09-12T17:31:57Z",
-    "downloadedBytes": 11030694233
+    "generated": "2026-09-12T19:44:16Z",
+    "downloadedBytes": 12888609173
   },
   "currentForecast": {
     "time": "2026-09-12T17:00+02:00",
@@ -277,6 +277,36 @@
       "weatherLabel": "Overskyet"
     },
     {
+      "time": "2026-09-14T17:00+02:00",
+      "leadHours": 48,
+      "temperature": 16.6,
+      "wind": 6.5,
+      "gust": null,
+      "windDirection": 291,
+      "windDirectionText": "V",
+      "cloudCover": 17,
+      "rainMm": 0.0,
+      "humidity": 65,
+      "pressure": 1022.3,
+      "weather": "clear",
+      "weatherLabel": "Klart"
+    },
+    {
+      "time": "2026-09-14T20:00+02:00",
+      "leadHours": 51,
+      "temperature": 15.3,
+      "wind": 2.3,
+      "gust": null,
+      "windDirection": 338,
+      "windDirectionText": "N",
+      "cloudCover": 7,
+      "rainMm": 0.0,
+      "humidity": 69,
+      "pressure": 1022.3,
+      "weather": "clear",
+      "weatherLabel": "Klart"
+    },
+    {
       "time": "2026-09-14T23:00+02:00",
       "leadHours": 54,
       "temperature": 12.8,
@@ -303,6 +333,21 @@
       "rainMm": 0.0,
       "humidity": 94,
       "pressure": 1022.1,
+      "weather": "clear",
+      "weatherLabel": "Klart"
+    },
+    {
+      "time": "2026-09-15T05:00+02:00",
+      "leadHours": 60,
+      "temperature": 12.9,
+      "wind": 2.2,
+      "gust": null,
+      "windDirection": 222,
+      "windDirectionText": "SV",
+      "cloudCover": 0,
+      "rainMm": 0.0,
+      "humidity": 94,
+      "pressure": 1021.5,
       "weather": "clear",
       "weatherLabel": "Klart"
     }
@@ -335,26 +380,26 @@
     {
       "date": "2026-09-14",
       "temperatureMin": 12.8,
-      "temperatureMax": 15.9,
+      "temperatureMax": 16.6,
       "rainMm": 0,
-      "windAvg": 5.2,
+      "windAvg": 5.0,
       "gustMax": null,
-      "windDirectionText": "V",
+      "windDirectionText": "NV",
       "weather": "overcast",
       "weatherLabel": "Overskyet",
-      "summary": "Overskyet, 13 til 16 grader, vind V omkring 5 m/s."
+      "summary": "Overskyet, 13 til 17 grader, vind NV omkring 5 m/s."
     },
     {
       "date": "2026-09-15",
-      "temperatureMin": 13.2,
+      "temperatureMin": 12.9,
       "temperatureMax": 13.2,
       "rainMm": 0,
-      "windAvg": 2.7,
+      "windAvg": 2.5,
       "gustMax": null,
       "windDirectionText": "SV",
       "weather": "clear",
       "weatherLabel": "Klart",
-      "summary": "Klart, 13 til 13 grader, vind SV omkring 3 m/s."
+      "summary": "Klart, 13 til 13 grader, vind SV omkring 2 m/s."
     }
   ]
 }
