@@ -1,0 +1,6 @@
+cartopy==0.24.1
+cfgrib==0.9.15.0
+eccodes==2.42.0
+matplotlib==3.10.6
+numpy==2.2.6
+xarray==2025.6.1

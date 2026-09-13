@@ -1,0 +1,57 @@
+name: Update GFS temperature maps
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "gfs/generate_temperature_maps.py"
+      - "gfs/requirements.txt"
+      - ".github/workflows/gfs_maps.yml"
+  schedule:
+    - cron: "15 5,11,17,23 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sortsoe-gfs-temperature-maps
+  cancel-in-progress: true
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: gfs/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libeccodes0 libeccodes-dev
+          python -m pip install --upgrade pip
+          pip install -r gfs/requirements.txt
+
+      - name: Generate GFS temperature maps
+        run: python gfs/generate_temperature_maps.py
+
+      - name: Commit GFS products
+        run: |
+          if [ -z "$(git status --porcelain -- gfs/output)" ]; then
+            echo "No GFS map change"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add gfs/output
+          git commit -m "Update GFS temperature maps"
+          git push
