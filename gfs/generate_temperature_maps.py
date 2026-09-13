@@ -114,8 +114,8 @@ def render_map(grib: Path, run: datetime, step: int, destination: Path) -> None:
     cmap, levels = temperature_colormap()
     norm = BoundaryNorm(levels, cmap.N, clip=True)
 
-    figure = plt.figure(figsize=(8, 8), dpi=140, facecolor="white")
-    axis = figure.add_axes((0.07, 0.13, 0.78, 0.80), projection=ccrs.PlateCarree())
+    figure = plt.figure(figsize=(8, 7.15), dpi=140, facecolor="white")
+    axis = figure.add_axes((0.055, 0.105, 0.80, 0.85), projection=ccrs.PlateCarree())
     axis.set_extent(EXTENT, crs=ccrs.PlateCarree())
     filled = axis.contourf(
         longitudes, latitudes, temperature, levels=levels, cmap=cmap, norm=norm,
@@ -134,16 +134,16 @@ def render_map(grib: Path, run: datetime, step: int, destination: Path) -> None:
     grid.xlabel_style = {"size": 7}
     grid.ylabel_style = {"size": 7}
 
-    color_axis = figure.add_axes((0.88, 0.18, 0.022, 0.70))
+    color_axis = figure.add_axes((0.88, 0.15, 0.022, 0.76))
     colorbar = figure.colorbar(filled, cax=color_axis, ticks=np.arange(-30, 36, 5))
     colorbar.set_label("Celsius", fontsize=8)
     colorbar.ax.tick_params(labelsize=7)
 
     valid = run + timedelta(hours=step)
-    figure.text(0.07, 0.085, "Temperatur 2 m", fontsize=12, weight="bold")
-    figure.text(0.07, 0.055, f"Data: NOAA GFS 0,25°, kørsel {run:%d.%m.%Y kl. %H} UTC", fontsize=8)
-    figure.text(0.57, 0.055, f"Gyldig: {valid:%d.%m.%Y kl. %H} UTC", fontsize=8)
-    figure.text(0.55, 0.14, "Kort © Vejrstation Sortsø Strand", fontsize=7, color="#222222")
+    figure.text(0.055, 0.105, "Temperatur 2 m", fontsize=12, weight="bold")
+    figure.text(0.055, 0.072, f"Data: NOAA GFS 0,25°, kørsel {run:%d.%m.%Y kl. %H} UTC", fontsize=8)
+    figure.text(0.855, 0.072, f"Gyldig: {valid:%d.%m.%Y kl. %H} UTC", fontsize=8, ha="right")
+    figure.text(0.855, 0.105, "Kort © Vejrstation Sortsø Strand", fontsize=7, color="#222222", ha="right")
     figure.savefig(destination, format="png", bbox_inches="tight", pad_inches=0.08)
     plt.close(figure)
 
