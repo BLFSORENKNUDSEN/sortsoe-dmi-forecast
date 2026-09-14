@@ -3,17 +3,28 @@
  * Selvstændig GFS kortafspiller til strandvejr.dk.
  *
  * Filen kan inkluderes direkte i en eksisterende PHP side. Sæt eventuelt
- * $gfsManifestUrl før include, hvis data skal hentes fra en anden adresse.
+ * manifestadresserne før include, hvis data skal hentes fra andre adresser.
  */
 $gfsManifestUrl = isset($gfsManifestUrl)
     ? $gfsManifestUrl
     : 'https://raw.githubusercontent.com/BLFSORENKNUDSEN/sortsoe-dmi-forecast/main/gfs/output/manifest.json';
+$gfsPressureManifestUrl = isset($gfsPressureManifestUrl)
+    ? $gfsPressureManifestUrl
+    : 'https://raw.githubusercontent.com/BLFSORENKNUDSEN/sortsoe-dmi-forecast/main/gfs/output/pressure_precipitation_manifest.json';
 ?>
 
-<section class="gfs_player" data-gfs-player data-manifest-url="<?php echo htmlspecialchars($gfsManifestUrl, ENT_QUOTES, 'UTF-8'); ?>">
+<section class="gfs_player"
+    data-gfs-player
+    data-temperature-manifest-url="<?php echo htmlspecialchars($gfsManifestUrl, ENT_QUOTES, 'UTF-8'); ?>"
+    data-pressure-manifest-url="<?php echo htmlspecialchars($gfsPressureManifestUrl, ENT_QUOTES, 'UTF-8'); ?>">
+    <div class="gfs_map_choices" role="group" aria-label="Vælg vejrkort">
+        <button type="button" class="gfs_choice is_active" data-gfs-choice="temperature" aria-pressed="true">Temperatur</button>
+        <button type="button" class="gfs_choice" data-gfs-choice="pressure" aria-pressed="false">Lufttryk og nedbør</button>
+    </div>
+
     <div class="gfs_stage">
-        <img class="gfs_image" data-gfs-image alt="GFS prognosekort over temperatur i Europa">
-        <div class="gfs_loading" data-gfs-loading>Henter temperaturkort…</div>
+        <img class="gfs_image" data-gfs-image alt="GFS prognosekort over Europa">
+        <div class="gfs_loading" data-gfs-loading>Henter vejrkort…</div>
         <div class="gfs_error" data-gfs-error hidden></div>
     </div>
 
@@ -45,6 +56,29 @@ $gfsManifestUrl = isset($gfsManifestUrl)
 
 .gfs_player [hidden] {
     display: none !important;
+}
+
+.gfs_map_choices {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.gfs_choice {
+    min-height: 40px;
+    padding: 8px 16px;
+    border: 1px solid #b8c4cc;
+    border-radius: 7px;
+    background: var(--gfs_surface);
+    color: var(--gfs_text);
+    cursor: pointer;
+    font-size: 15px;
+}
+
+.gfs_choice.is_active {
+    border-color: var(--gfs_accent);
+    background: var(--gfs_accent);
+    color: #ffffff;
 }
 
 .gfs_stage {
@@ -137,6 +171,11 @@ $gfsManifestUrl = isset($gfsManifestUrl)
         border-radius: 6px;
     }
 
+    .gfs_map_choices {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
     .gfs_status {
         display: block;
         font-size: 14px;
@@ -166,7 +205,10 @@ $gfsManifestUrl = isset($gfsManifestUrl)
     var players = document.querySelectorAll('[data-gfs-player]');
 
     function initialise(player) {
-        var manifestUrl = player.getAttribute('data-manifest-url');
+        var manifestUrls = {
+            temperature: player.getAttribute('data-temperature-manifest-url'),
+            pressure: player.getAttribute('data-pressure-manifest-url')
+        };
         var image = player.querySelector('[data-gfs-image]');
         var loading = player.querySelector('[data-gfs-loading]');
         var error = player.querySelector('[data-gfs-error]');
@@ -176,10 +218,13 @@ $gfsManifestUrl = isset($gfsManifestUrl)
         var play = player.querySelector('[data-gfs-play]');
         var next = player.querySelector('[data-gfs-next]');
         var range = player.querySelector('[data-gfs-range]');
+        var choices = player.querySelectorAll('[data-gfs-choice]');
+        var manifests = {};
+        var activeType = 'temperature';
         var products = [];
         var current = 0;
         var timer = null;
-        var baseUrl = manifestUrl.substring(0, manifestUrl.lastIndexOf('/') + 1);
+        var baseUrl = '';
 
         function formatDanishTime(isoTime) {
             return new Intl.DateTimeFormat('da-DK', {
@@ -209,7 +254,7 @@ $gfsManifestUrl = isset($gfsManifestUrl)
             var product = products[current];
             image.classList.remove('is_ready');
             image.src = baseUrl + product.file + '?v=' + encodeURIComponent(product.valid_utc);
-            image.alt = 'GFS temperaturkort gyldigt ' + formatDanishTime(product.valid_utc);
+            image.alt = (activeType === 'temperature' ? 'GFS temperaturkort gyldigt ' : 'GFS kort med lufttryk og nedbør gyldigt ') + formatDanishTime(product.valid_utc);
             valid.textContent = 'Gyldig ' + formatDanishTime(product.valid_utc);
             position.textContent = 'Prognosetime +' + product.step_hours + ' · ' + (current + 1) + ' af ' + products.length;
             range.value = String(current);
@@ -217,6 +262,27 @@ $gfsManifestUrl = isset($gfsManifestUrl)
             var following = products[(current + 1) % products.length];
             var preload = new Image();
             preload.src = baseUrl + following.file + '?v=' + encodeURIComponent(following.valid_utc);
+        }
+
+        function selectMapType(type) {
+            if (!manifests[type]) {
+                return;
+            }
+            stop();
+            activeType = type;
+            products = manifests[type].products;
+            baseUrl = manifestUrls[type].substring(0, manifestUrls[type].lastIndexOf('/') + 1);
+            range.max = String(products.length - 1);
+            error.hidden = true;
+            loading.hidden = false;
+            loading.textContent = 'Henter vejrkort…';
+
+            for (var choiceIndex = 0; choiceIndex < choices.length; choiceIndex += 1) {
+                var isActive = choices[choiceIndex].getAttribute('data-gfs-choice') === type;
+                choices[choiceIndex].classList.toggle('is_active', isActive);
+                choices[choiceIndex].setAttribute('aria-pressed', isActive ? 'true' : 'false');
+            }
+            show(0);
         }
 
         image.addEventListener('load', function () {
@@ -227,7 +293,7 @@ $gfsManifestUrl = isset($gfsManifestUrl)
         image.addEventListener('error', function () {
             loading.hidden = true;
             error.hidden = false;
-            error.textContent = 'Temperaturkortet kunne ikke hentes. Prøv at genindlæse siden.';
+            error.textContent = 'Vejrkortet kunne ikke hentes. Prøv at genindlæse siden.';
             stop();
         });
 
@@ -258,20 +324,32 @@ $gfsManifestUrl = isset($gfsManifestUrl)
             show(parseInt(range.value, 10));
         });
 
-        fetch(manifestUrl + '?v=' + Date.now(), { cache: 'no-store' })
-            .then(function (response) {
+        for (var choiceIndex = 0; choiceIndex < choices.length; choiceIndex += 1) {
+            choices[choiceIndex].addEventListener('click', function () {
+                selectMapType(this.getAttribute('data-gfs-choice'));
+            });
+        }
+
+        function fetchManifest(url) {
+            return fetch(url + '?v=' + Date.now(), { cache: 'no-store' }).then(function (response) {
                 if (!response.ok) {
                     throw new Error('HTTP ' + response.status);
                 }
                 return response.json();
-            })
-            .then(function (manifest) {
-                if (!manifest.products || !manifest.products.length) {
-                    throw new Error('Manifestet indeholder ingen kort');
+            });
+        }
+
+        Promise.all([
+            fetchManifest(manifestUrls.temperature),
+            fetchManifest(manifestUrls.pressure)
+        ])
+            .then(function (loaded) {
+                if (!loaded[0].products || !loaded[0].products.length || !loaded[1].products || !loaded[1].products.length) {
+                    throw new Error('Et manifest indeholder ingen kort');
                 }
-                products = manifest.products;
-                range.max = String(products.length - 1);
-                show(0);
+                manifests.temperature = loaded[0];
+                manifests.pressure = loaded[1];
+                selectMapType('temperature');
             })
             .catch(function () {
                 loading.hidden = true;
