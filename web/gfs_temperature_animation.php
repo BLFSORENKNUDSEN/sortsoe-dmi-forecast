@@ -11,15 +11,25 @@ $gfsManifestUrl = isset($gfsManifestUrl)
 $gfsPressureManifestUrl = isset($gfsPressureManifestUrl)
     ? $gfsPressureManifestUrl
     : 'https://raw.githubusercontent.com/BLFSORENKNUDSEN/sortsoe-dmi-forecast/main/gfs/output/pressure_precipitation_manifest.json';
+$gfsWindManifestUrl = isset($gfsWindManifestUrl)
+    ? $gfsWindManifestUrl
+    : 'https://raw.githubusercontent.com/BLFSORENKNUDSEN/sortsoe-dmi-forecast/main/gfs/output/wind_manifest.json';
+$gfsCloudManifestUrl = isset($gfsCloudManifestUrl)
+    ? $gfsCloudManifestUrl
+    : 'https://raw.githubusercontent.com/BLFSORENKNUDSEN/sortsoe-dmi-forecast/main/gfs/output/cloud_manifest.json';
 ?>
 
 <section class="gfs_player"
     data-gfs-player
     data-temperature-manifest-url="<?php echo htmlspecialchars($gfsManifestUrl, ENT_QUOTES, 'UTF-8'); ?>"
-    data-pressure-manifest-url="<?php echo htmlspecialchars($gfsPressureManifestUrl, ENT_QUOTES, 'UTF-8'); ?>">
+    data-pressure-manifest-url="<?php echo htmlspecialchars($gfsPressureManifestUrl, ENT_QUOTES, 'UTF-8'); ?>"
+    data-wind-manifest-url="<?php echo htmlspecialchars($gfsWindManifestUrl, ENT_QUOTES, 'UTF-8'); ?>"
+    data-cloud-manifest-url="<?php echo htmlspecialchars($gfsCloudManifestUrl, ENT_QUOTES, 'UTF-8'); ?>">
     <div class="gfs_map_choices" role="group" aria-label="Vælg vejrkort">
         <button type="button" class="gfs_choice is_active" data-gfs-choice="temperature" aria-pressed="true">Temperatur</button>
         <button type="button" class="gfs_choice" data-gfs-choice="pressure" aria-pressed="false">Lufttryk og nedbør</button>
+        <button type="button" class="gfs_choice" data-gfs-choice="wind" aria-pressed="false">Vind</button>
+        <button type="button" class="gfs_choice" data-gfs-choice="cloud" aria-pressed="false">Skydække</button>
     </div>
 
     <div class="gfs_stage">
@@ -207,7 +217,9 @@ $gfsPressureManifestUrl = isset($gfsPressureManifestUrl)
     function initialise(player) {
         var manifestUrls = {
             temperature: player.getAttribute('data-temperature-manifest-url'),
-            pressure: player.getAttribute('data-pressure-manifest-url')
+            pressure: player.getAttribute('data-pressure-manifest-url'),
+            wind: player.getAttribute('data-wind-manifest-url'),
+            cloud: player.getAttribute('data-cloud-manifest-url')
         };
         var image = player.querySelector('[data-gfs-image]');
         var loading = player.querySelector('[data-gfs-loading]');
@@ -254,7 +266,13 @@ $gfsPressureManifestUrl = isset($gfsPressureManifestUrl)
             var product = products[current];
             image.classList.remove('is_ready');
             image.src = baseUrl + product.file + '?v=' + encodeURIComponent(product.valid_utc);
-            image.alt = (activeType === 'temperature' ? 'GFS temperaturkort gyldigt ' : 'GFS kort med lufttryk og nedbør gyldigt ') + formatDanishTime(product.valid_utc);
+            var descriptions = {
+                temperature: 'GFS temperaturkort gyldigt ',
+                pressure: 'GFS kort med lufttryk og nedbør gyldigt ',
+                wind: 'GFS vindkort gyldigt ',
+                cloud: 'GFS skykort gyldigt '
+            };
+            image.alt = descriptions[activeType] + formatDanishTime(product.valid_utc);
             valid.textContent = 'Gyldig ' + formatDanishTime(product.valid_utc);
             position.textContent = 'Prognosetime +' + product.step_hours + ' · ' + (current + 1) + ' af ' + products.length;
             range.value = String(current);
@@ -341,14 +359,21 @@ $gfsPressureManifestUrl = isset($gfsPressureManifestUrl)
 
         Promise.all([
             fetchManifest(manifestUrls.temperature),
-            fetchManifest(manifestUrls.pressure)
+            fetchManifest(manifestUrls.pressure),
+            fetchManifest(manifestUrls.wind),
+            fetchManifest(manifestUrls.cloud)
         ])
             .then(function (loaded) {
-                if (!loaded[0].products || !loaded[0].products.length || !loaded[1].products || !loaded[1].products.length) {
+                if (!loaded[0].products || !loaded[0].products.length ||
+                    !loaded[1].products || !loaded[1].products.length ||
+                    !loaded[2].products || !loaded[2].products.length ||
+                    !loaded[3].products || !loaded[3].products.length) {
                     throw new Error('Et manifest indeholder ingen kort');
                 }
                 manifests.temperature = loaded[0];
                 manifests.pressure = loaded[1];
+                manifests.wind = loaded[2];
+                manifests.cloud = loaded[3];
                 selectMapType('temperature');
             })
             .catch(function () {
