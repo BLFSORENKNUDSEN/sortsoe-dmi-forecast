@@ -8,6 +8,7 @@ on:
     paths:
       - "gfs/generate_temperature_maps.py"
       - "gfs/generate_pressure_precipitation_maps.py"
+      - "gfs/generate_wind_cloud_maps.py"
       - "gfs/requirements.txt"
       - ".github/workflows/gfs_maps.yml"
   schedule:
@@ -47,6 +48,9 @@ jobs:
 
       - name: Generate GFS pressure and precipitation maps
         run: python gfs/generate_pressure_precipitation_maps.py
+
+      - name: Generate GFS wind and cloud maps
+        run: python gfs/generate_wind_cloud_maps.py
 
       - name: Commit GFS products
         run: |
