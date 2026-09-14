@@ -43,6 +43,10 @@ $gfsManifestUrl = isset($gfsManifestUrl)
     font-family: Arial, Helvetica, sans-serif;
 }
 
+.gfs_player [hidden] {
+    display: none !important;
+}
+
 .gfs_stage {
     position: relative;
     overflow: hidden;
