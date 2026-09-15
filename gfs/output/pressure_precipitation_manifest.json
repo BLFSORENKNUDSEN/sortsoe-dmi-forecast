@@ -4,8 +4,8 @@
     "mean sea level pressure",
     "6 hour accumulated precipitation"
   ],
-  "run_utc": "2026-09-14T18:00:00+00:00",
-  "generated_utc": "2026-09-15T01:32:49.537653+00:00",
+  "run_utc": "2026-09-15T00:00:00+00:00",
+  "generated_utc": "2026-09-15T10:08:28.939964+00:00",
   "extent": {
     "west": -12.0,
     "east": 38.0,
@@ -15,102 +15,102 @@
   "products": [
     {
       "step_hours": 6,
-      "valid_utc": "2026-09-15T00:00:00+00:00",
+      "valid_utc": "2026-09-15T06:00:00+00:00",
       "file": "pressure_precipitation_f006.png"
     },
     {
       "step_hours": 12,
-      "valid_utc": "2026-09-15T06:00:00+00:00",
+      "valid_utc": "2026-09-15T12:00:00+00:00",
       "file": "pressure_precipitation_f012.png"
     },
     {
       "step_hours": 18,
-      "valid_utc": "2026-09-15T12:00:00+00:00",
+      "valid_utc": "2026-09-15T18:00:00+00:00",
       "file": "pressure_precipitation_f018.png"
     },
     {
       "step_hours": 24,
-      "valid_utc": "2026-09-15T18:00:00+00:00",
+      "valid_utc": "2026-09-16T00:00:00+00:00",
       "file": "pressure_precipitation_f024.png"
     },
     {
       "step_hours": 30,
-      "valid_utc": "2026-09-16T00:00:00+00:00",
+      "valid_utc": "2026-09-16T06:00:00+00:00",
       "file": "pressure_precipitation_f030.png"
     },
     {
       "step_hours": 36,
-      "valid_utc": "2026-09-16T06:00:00+00:00",
+      "valid_utc": "2026-09-16T12:00:00+00:00",
       "file": "pressure_precipitation_f036.png"
     },
     {
       "step_hours": 42,
-      "valid_utc": "2026-09-16T12:00:00+00:00",
+      "valid_utc": "2026-09-16T18:00:00+00:00",
       "file": "pressure_precipitation_f042.png"
     },
     {
       "step_hours": 48,
-      "valid_utc": "2026-09-16T18:00:00+00:00",
+      "valid_utc": "2026-09-17T00:00:00+00:00",
       "file": "pressure_precipitation_f048.png"
     },
     {
       "step_hours": 54,
-      "valid_utc": "2026-09-17T00:00:00+00:00",
+      "valid_utc": "2026-09-17T06:00:00+00:00",
       "file": "pressure_precipitation_f054.png"
     },
     {
       "step_hours": 60,
-      "valid_utc": "2026-09-17T06:00:00+00:00",
+      "valid_utc": "2026-09-17T12:00:00+00:00",
       "file": "pressure_precipitation_f060.png"
     },
     {
       "step_hours": 66,
-      "valid_utc": "2026-09-17T12:00:00+00:00",
+      "valid_utc": "2026-09-17T18:00:00+00:00",
       "file": "pressure_precipitation_f066.png"
     },
     {
       "step_hours": 72,
-      "valid_utc": "2026-09-17T18:00:00+00:00",
+      "valid_utc": "2026-09-18T00:00:00+00:00",
       "file": "pressure_precipitation_f072.png"
     },
     {
       "step_hours": 78,
-      "valid_utc": "2026-09-18T00:00:00+00:00",
+      "valid_utc": "2026-09-18T06:00:00+00:00",
       "file": "pressure_precipitation_f078.png"
     },
     {
       "step_hours": 84,
-      "valid_utc": "2026-09-18T06:00:00+00:00",
+      "valid_utc": "2026-09-18T12:00:00+00:00",
       "file": "pressure_precipitation_f084.png"
     },
     {
       "step_hours": 90,
-      "valid_utc": "2026-09-18T12:00:00+00:00",
+      "valid_utc": "2026-09-18T18:00:00+00:00",
       "file": "pressure_precipitation_f090.png"
     },
     {
       "step_hours": 96,
-      "valid_utc": "2026-09-18T18:00:00+00:00",
+      "valid_utc": "2026-09-19T00:00:00+00:00",
       "file": "pressure_precipitation_f096.png"
     },
     {
       "step_hours": 102,
-      "valid_utc": "2026-09-19T00:00:00+00:00",
+      "valid_utc": "2026-09-19T06:00:00+00:00",
       "file": "pressure_precipitation_f102.png"
     },
     {
       "step_hours": 108,
-      "valid_utc": "2026-09-19T06:00:00+00:00",
+      "valid_utc": "2026-09-19T12:00:00+00:00",
       "file": "pressure_precipitation_f108.png"
     },
     {
       "step_hours": 114,
-      "valid_utc": "2026-09-19T12:00:00+00:00",
+      "valid_utc": "2026-09-19T18:00:00+00:00",
       "file": "pressure_precipitation_f114.png"
     },
     {
       "step_hours": 120,
-      "valid_utc": "2026-09-19T18:00:00+00:00",
+      "valid_utc": "2026-09-20T00:00:00+00:00",
       "file": "pressure_precipitation_f120.png"
     }
   ]
