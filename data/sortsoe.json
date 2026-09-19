@@ -17,8 +17,8 @@
     "collection": "harmonie_dini_sf",
     "modelRun": "2026-09-19T15:00:00Z",
     "intervalHours": 3,
-    "generated": "2026-09-19T17:30:36Z",
-    "downloadedBytes": 11004355640
+    "generated": "2026-09-19T19:39:20Z",
+    "downloadedBytes": 12841399271
   },
   "currentForecast": {
     "time": "2026-09-19T17:00+02:00",
@@ -305,6 +305,51 @@
       "pressure": 1023.1,
       "weather": "clear",
       "weatherLabel": "Klart"
+    },
+    {
+      "time": "2026-09-21T23:00+02:00",
+      "leadHours": 54,
+      "temperature": 13.7,
+      "wind": 6.3,
+      "gust": null,
+      "windDirection": 319,
+      "windDirectionText": "NV",
+      "cloudCover": 0,
+      "rainMm": 0.0,
+      "humidity": 75,
+      "pressure": 1024.9,
+      "weather": "clear",
+      "weatherLabel": "Klart"
+    },
+    {
+      "time": "2026-09-22T02:00+02:00",
+      "leadHours": 57,
+      "temperature": 12.3,
+      "wind": 5.4,
+      "gust": null,
+      "windDirection": 317,
+      "windDirectionText": "NV",
+      "cloudCover": 19,
+      "rainMm": 0.0,
+      "humidity": 85,
+      "pressure": 1024.7,
+      "weather": "clear",
+      "weatherLabel": "Klart"
+    },
+    {
+      "time": "2026-09-22T05:00+02:00",
+      "leadHours": 60,
+      "temperature": 12.2,
+      "wind": 3.6,
+      "gust": null,
+      "windDirection": 305,
+      "windDirectionText": "NV",
+      "cloudCover": 24,
+      "rainMm": 0.0,
+      "humidity": 88,
+      "pressure": 1025.1,
+      "weather": "clear",
+      "weatherLabel": "Klart"
     }
   ],
   "days": [
@@ -337,12 +382,24 @@
       "temperatureMin": 13.7,
       "temperatureMax": 15.8,
       "rainMm": 0.4,
-      "windAvg": 11.2,
+      "windAvg": 10.6,
       "gustMax": null,
       "windDirectionText": "NV",
       "weather": "light_rain",
       "weatherLabel": "Let regn",
       "summary": "Let regn, 14 til 16 grader, omkring 0.4 mm nedbør, vind NV omkring 11 m/s."
+    },
+    {
+      "date": "2026-09-22",
+      "temperatureMin": 12.2,
+      "temperatureMax": 12.3,
+      "rainMm": 0,
+      "windAvg": 4.5,
+      "gustMax": null,
+      "windDirectionText": "NV",
+      "weather": "clear",
+      "weatherLabel": "Klart",
+      "summary": "Klart, 12 til 12 grader, vind NV omkring 4 m/s."
     }
   ]
 }
