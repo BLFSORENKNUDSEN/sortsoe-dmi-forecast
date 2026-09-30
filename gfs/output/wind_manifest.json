@@ -2,7 +2,7 @@
   "source": "NOAA GFS 0.25 degree",
   "parameter": "10 m wind",
   "run_utc": "2026-09-30T06:00:00+00:00",
-  "generated_utc": "2026-09-30T11:12:50.730262+00:00",
+  "generated_utc": "2026-09-30T16:52:02.073724+00:00",
   "extent": {
     "west": -12.0,
     "east": 38.0,
