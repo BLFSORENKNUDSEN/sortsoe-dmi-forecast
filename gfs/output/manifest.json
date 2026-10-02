@@ -2,7 +2,7 @@
   "source": "NOAA GFS 0.25 degree",
   "parameter": "2 m temperature",
   "run_utc": "2026-10-02T06:00:00+00:00",
-  "generated_utc": "2026-10-02T11:09:22.973359+00:00",
+  "generated_utc": "2026-10-02T16:40:46.760727+00:00",
   "extent": {
     "west": -12.0,
     "east": 38.0,
