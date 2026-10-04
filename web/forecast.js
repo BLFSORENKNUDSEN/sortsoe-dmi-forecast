@@ -1,5 +1,5 @@
 (() => {
-  const FORECAST_FRONTEND_VERSION = '20261004-8';
+  const FORECAST_FRONTEND_VERSION = '20261004-9';
   console.info('Strandvejr forecast frontend', FORECAST_FRONTEND_VERSION);
   const RAW_BASE = window.SORTSOE_FORECAST_BASE_URL || 'https://raw.githubusercontent.com/BLFSORENKNUDSEN/sortsoe-dmi-forecast/main/data';
   const SORTSOE_URL = window.SORTSOE_FORECAST_URL || `${RAW_BASE}/sortsoe.json`;
@@ -364,7 +364,7 @@
   };
 
   const GEONAMES_USER = 'sorenknudsen';
-  const GEONAMES_BASE = 'https://api.geonames.org';
+  const GEONAMES_BASE = 'https://secure.geonames.org';
   const POSTCODE_API = 'https://dawa.companydata.dk';
 
   const postcodeReverseFallback = async (lat, lon) => {
