@@ -1,5 +1,5 @@
 (() => {
-  const FORECAST_FRONTEND_VERSION = '20261004-7';
+  const FORECAST_FRONTEND_VERSION = '20261004-8';
   console.info('Strandvejr forecast frontend', FORECAST_FRONTEND_VERSION);
   const RAW_BASE = window.SORTSOE_FORECAST_BASE_URL || 'https://raw.githubusercontent.com/BLFSORENKNUDSEN/sortsoe-dmi-forecast/main/data';
   const SORTSOE_URL = window.SORTSOE_FORECAST_URL || `${RAW_BASE}/sortsoe.json`;
@@ -363,57 +363,72 @@
     return Array.isArray(kommuner) && kommuner.length ? kommuner[0]?.navn || '' : '';
   };
 
+  const GEONAMES_USER = 'sorenknudsen';
+  const GEONAMES_BASE = 'https://api.geonames.org';
   const POSTCODE_API = 'https://dawa.companydata.dk';
-  let postcodeCache = null;
 
-  const reversePlaceName = async (lat, lon) => {
-    // Reverse endpoint expects x=longitude, y=latitude.
+  const postcodeReverseFallback = async (lat, lon) => {
     const url =
       POSTCODE_API + '/postnumre/reverse' +
       '?x=' + encodeURIComponent(lon) +
       '&y=' + encodeURIComponent(lat);
-
     const r = await fetch(url);
     if (!r.ok) throw new Error(`Postnummer reverse HTTP ${r.status}`);
     const item = await r.json();
     return item?.navn || 'Din position';
   };
 
-  const loadPostcodes = async () => {
-    if (postcodeCache) return postcodeCache;
-    const r = await fetch(POSTCODE_API + '/postnumre?per_side=2000');
-    if (!r.ok) throw new Error(`Postnummerliste HTTP ${r.status}`);
-    const rows = await r.json();
-    postcodeCache = Array.isArray(rows) ? rows : [];
-    return postcodeCache;
-  };
+  const reversePlaceName = async (lat, lon) => {
+    const params = new URLSearchParams({
+      lat:String(lat),
+      lng:String(lon),
+      username:GEONAMES_USER,
+      country:'DK',
+      radius:'20',
+      maxRows:'10'
+    });
 
-  const postcodeCenter = item => {
-    const vc = item?.visueltcenter;
-    if (Array.isArray(vc) && vc.length >= 2) {
-      return {lon:Number(vc[0]), lat:Number(vc[1])};
+    const r = await fetch(GEONAMES_BASE + '/findNearbyPlaceNameJSON?' + params.toString());
+    if (!r.ok) throw new Error(`GeoNames reverse HTTP ${r.status}`);
+    const data = await r.json();
+
+    if (data?.status) {
+      throw new Error(`GeoNames: ${data.status.message || data.status.value}`);
     }
-    const bbox = item?.bbox;
-    if (Array.isArray(bbox) && bbox.length >= 4) {
-      return {
-        lon:(Number(bbox[0]) + Number(bbox[2])) / 2,
-        lat:(Number(bbox[1]) + Number(bbox[3])) / 2
-      };
+
+    const places = Array.isArray(data?.geonames) ? data.geonames : [];
+    if (places.length) {
+      const best = places
+        .filter(p => p?.name && Number.isFinite(Number(p?.lat)) && Number.isFinite(Number(p?.lng)))
+        .sort((a,b) => Number(a.distance ?? 9999) - Number(b.distance ?? 9999))[0];
+      if (best?.name) return best.name;
     }
-    return null;
+
+    return postcodeReverseFallback(lat, lon);
   };
 
-  const getPostcodeDetails = async nr => {
-    const r = await fetch(POSTCODE_API + '/postnumre/' + encodeURIComponent(nr));
-    if (!r.ok) throw new Error(`Postnummeropslag HTTP ${r.status}`);
-    return r.json();
-  };
+  const searchPlaces = async query => {
+    const params = new URLSearchParams({
+      name_startsWith:query,
+      username:GEONAMES_USER,
+      country:'DK',
+      featureClass:'P',
+      maxRows:'12',
+      style:'FULL',
+      orderby:'relevance'
+    });
 
-  const normalize = value =>
-    String(value || '')
-      .toLocaleLowerCase('da-DK')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '');
+    const r = await fetch(GEONAMES_BASE + '/searchJSON?' + params.toString());
+    if (!r.ok) throw new Error(`GeoNames search HTTP ${r.status}`);
+    const data = await r.json();
+
+    if (data?.status) {
+      throw new Error(`GeoNames: ${data.status.message || data.status.value}`);
+    }
+
+    return (Array.isArray(data?.geonames) ? data.geonames : [])
+      .filter(p => p?.name && Number.isFinite(Number(p?.lat)) && Number.isFinite(Number(p?.lng)));
+  };
 
   const setupSearch = () => {
     const input = root.querySelector('[data-city-search]');
@@ -424,10 +439,11 @@
 
     const showSuggestions = rows => {
       currentSuggestions = rows;
-      box.innerHTML = rows.map((s,i) => {
-        const label = s?.navn || '';
-        const nr = s?.nr ? `<span>${esc(s.nr)}</span>` : '';
-        return `<button type="button" data-suggestion-index="${i}"><strong>${esc(label)}</strong>${nr}</button>`;
+      box.innerHTML = rows.map((p,i) => {
+        const name = p?.name || '';
+        const admin = p?.adminName1 ? `<span>${esc(p.adminName1)}</span>` : '';
+        const type = p?.fcodeName ? `<small>${esc(p.fcodeName)}</small>` : '';
+        return `<button type="button" data-suggestion-index="${i}"><strong>${esc(name)}</strong>${admin}${type}</button>`;
       }).join('');
       box.hidden = !rows.length;
     };
@@ -446,29 +462,9 @@
 
       timer = setTimeout(async () => {
         try {
-          const all = await loadPostcodes();
+          const rows = await searchPlaces(q);
           if (serial !== searchSerial) return;
-
-          const nq = normalize(q);
-          const starts = [];
-          const contains = [];
-
-          for (const item of all) {
-            const name = normalize(item?.navn);
-            if (!name) continue;
-            if (name.startsWith(nq)) starts.push(item);
-            else if (name.includes(nq)) contains.push(item);
-          }
-
-          const seen = new Set();
-          const usable = [...starts, ...contains].filter(item => {
-            const key = item.nr || item.navn;
-            if (seen.has(key)) return false;
-            seen.add(key);
-            return true;
-          }).slice(0,8);
-
-          showSuggestions(usable);
+          showSuggestions(rows.slice(0,8));
         } catch (err) {
           console.error('Bysøgning:', err);
           if (serial === searchSerial) {
@@ -476,30 +472,31 @@
             currentSuggestions = [];
           }
         }
-      }, 180);
+      }, 220);
     });
 
     box.addEventListener('click', async e => {
       const btn = e.target.closest('[data-suggestion-index]');
       if (!btn) return;
 
-      const item = currentSuggestions[Number(btn.dataset.suggestionIndex)];
+      const place = currentSuggestions[Number(btn.dataset.suggestionIndex)];
       box.hidden = true;
-      input.value = item?.navn || '';
+      input.value = place?.name || '';
+
+      const lat = Number(place?.lat);
+      const lon = Number(place?.lng);
+      const name = place?.name || 'Valgt sted';
+
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+        status('Kunne ikke finde koordinater for stedet.');
+        return;
+      }
 
       try {
-        const details = await getPostcodeDetails(item.nr);
-        const center = postcodeCenter(details);
-        const name = details?.navn || item?.navn || 'Valgt by';
-
-        if (!center || !Number.isFinite(center.lat) || !Number.isFinite(center.lon)) {
-          throw new Error('Postnummeret har ingen brugbare koordinater');
-        }
-
-        await loadForecastForCoords(center.lat, center.lon, name);
+        await loadForecastForCoords(lat, lon, name);
       } catch (err) {
-        console.error('Valg af by:', err);
-        status('Kunne ikke hente vejrudsigten for byen.');
+        console.error('Valg af sted:', err);
+        status('Kunne ikke hente vejrudsigten for stedet.');
       }
     });
 
@@ -532,7 +529,12 @@
         try {
           name = await reversePlaceName(lat, lon);
         } catch (err) {
-          console.warn('Kunne ikke finde bynavn for position:', err);
+          console.warn('Kunne ikke finde stednavn for position:', err);
+          try {
+            name = await postcodeReverseFallback(lat, lon);
+          } catch (fallbackErr) {
+            console.warn('Kunne heller ikke finde postnummernavn:', fallbackErr);
+          }
         }
 
         try {
