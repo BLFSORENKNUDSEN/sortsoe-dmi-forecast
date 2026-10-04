@@ -211,10 +211,10 @@ def build_spatial_selection(gid):
         {
             "gridLat": key[0],
             "gridLon": key[1],
-            "lat": round(entry[1][2], 5),
-            "lon": round(entry[1][3], 5),
+            "lat": round(value[2], 5),
+            "lon": round(value[3], 5),
         }
-        for entry, key in [(v, k) for k, v in selected]
+        for key, value in selected
     ]
 
     # Exact nearest native point for Sortsø Strand.
@@ -503,7 +503,7 @@ def main():
         points = []
         for i in point_indices:
             points.append([
-                coord_value := coords[i]["gridLat"],
+                coords[i]["gridLat"],
                 coords[i]["gridLon"],
                 [num(x) for x in matrices["temperature"][i]],
                 [num(x) for x in matrices["wind"][i]],
