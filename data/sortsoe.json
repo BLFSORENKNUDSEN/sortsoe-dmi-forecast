@@ -16,8 +16,8 @@
     "collection": "harmonie_dini_sf",
     "modelRun": "2026-10-04T12:00:00Z",
     "intervalHours": 3,
-    "generated": "2026-10-04T14:40:37Z",
-    "downloadedBytes": 12243514222
+    "generated": "2026-10-04T16:01:04Z",
+    "downloadedBytes": 12855806770
   },
   "currentForecast": {
     "time": "2026-10-04T14:00+02:00",
@@ -313,6 +313,20 @@
       "pressure": 1017.7,
       "weather": "overcast",
       "weatherLabel": "Overskyet"
+    },
+    {
+      "time": "2026-10-07T02:00+02:00",
+      "leadHours": 60,
+      "temperature": 14.5,
+      "wind": 3.0,
+      "windDirection": 192,
+      "windDirectionText": "S",
+      "cloudCover": 100,
+      "rainMm": 0.0,
+      "humidity": 95,
+      "pressure": 1016.8,
+      "weather": "overcast",
+      "weatherLabel": "Overskyet"
     }
   ],
   "days": [
@@ -348,6 +362,17 @@
       "weather": "light_rain",
       "weatherLabel": "Let regn",
       "summary": "Let regn, 15 til 16 grader, omkring 0.3 mm nedbør, vind V omkring 5 m/s."
+    },
+    {
+      "date": "2026-10-07",
+      "temperatureMin": 14.5,
+      "temperatureMax": 14.5,
+      "rainMm": 0,
+      "windAvg": 3.0,
+      "windDirectionText": "S",
+      "weather": "overcast",
+      "weatherLabel": "Overskyet",
+      "summary": "Overskyet, 14 til 14 grader, vind S omkring 3 m/s."
     }
   ]
 }
