@@ -17,6 +17,15 @@ $gfsWindManifestUrl = isset($gfsWindManifestUrl)
 $gfsCloudManifestUrl = isset($gfsCloudManifestUrl)
     ? $gfsCloudManifestUrl
     : 'https://raw.githubusercontent.com/BLFSORENKNUDSEN/sortsoe-dmi-forecast/main/gfs/output/cloud_manifest.json';
+$gfsGustManifestUrl = isset($gfsGustManifestUrl)
+    ? $gfsGustManifestUrl
+    : 'https://raw.githubusercontent.com/BLFSORENKNUDSEN/sortsoe-dmi-forecast/main/gfs/output/gust_manifest.json';
+$gfsThunderManifestUrl = isset($gfsThunderManifestUrl)
+    ? $gfsThunderManifestUrl
+    : 'https://raw.githubusercontent.com/BLFSORENKNUDSEN/sortsoe-dmi-forecast/main/gfs/output/thunder_manifest.json';
+$gfsFeelsLikeManifestUrl = isset($gfsFeelsLikeManifestUrl)
+    ? $gfsFeelsLikeManifestUrl
+    : 'https://raw.githubusercontent.com/BLFSORENKNUDSEN/sortsoe-dmi-forecast/main/gfs/output/feels_like_manifest.json';
 ?>
 
 <section class="gfs_player"
@@ -24,12 +33,18 @@ $gfsCloudManifestUrl = isset($gfsCloudManifestUrl)
     data-temperature-manifest-url="<?php echo htmlspecialchars($gfsManifestUrl, ENT_QUOTES, 'UTF-8'); ?>"
     data-pressure-manifest-url="<?php echo htmlspecialchars($gfsPressureManifestUrl, ENT_QUOTES, 'UTF-8'); ?>"
     data-wind-manifest-url="<?php echo htmlspecialchars($gfsWindManifestUrl, ENT_QUOTES, 'UTF-8'); ?>"
-    data-cloud-manifest-url="<?php echo htmlspecialchars($gfsCloudManifestUrl, ENT_QUOTES, 'UTF-8'); ?>">
+    data-cloud-manifest-url="<?php echo htmlspecialchars($gfsCloudManifestUrl, ENT_QUOTES, 'UTF-8'); ?>"
+    data-gust-manifest-url="<?php echo htmlspecialchars($gfsGustManifestUrl, ENT_QUOTES, 'UTF-8'); ?>"
+    data-thunder-manifest-url="<?php echo htmlspecialchars($gfsThunderManifestUrl, ENT_QUOTES, 'UTF-8'); ?>"
+    data-feels-like-manifest-url="<?php echo htmlspecialchars($gfsFeelsLikeManifestUrl, ENT_QUOTES, 'UTF-8'); ?>">
     <div class="gfs_map_choices" role="group" aria-label="Vælg vejrkort">
         <button type="button" class="gfs_choice is_active" data-gfs-choice="temperature" aria-pressed="true">Temperatur</button>
         <button type="button" class="gfs_choice" data-gfs-choice="pressure" aria-pressed="false">Lufttryk og nedbør</button>
         <button type="button" class="gfs_choice" data-gfs-choice="wind" aria-pressed="false">Vind</button>
         <button type="button" class="gfs_choice" data-gfs-choice="cloud" aria-pressed="false">Skydække</button>
+        <button type="button" class="gfs_choice" data-gfs-choice="gust" aria-pressed="false">Vindstød</button>
+        <button type="button" class="gfs_choice" data-gfs-choice="thunder" aria-pressed="false">Tordenrisiko</button>
+        <button type="button" class="gfs_choice" data-gfs-choice="feels_like" aria-pressed="false">Oplevet temperatur</button>
     </div>
 
     <div class="gfs_stage">
@@ -219,7 +234,10 @@ $gfsCloudManifestUrl = isset($gfsCloudManifestUrl)
             temperature: player.getAttribute('data-temperature-manifest-url'),
             pressure: player.getAttribute('data-pressure-manifest-url'),
             wind: player.getAttribute('data-wind-manifest-url'),
-            cloud: player.getAttribute('data-cloud-manifest-url')
+            cloud: player.getAttribute('data-cloud-manifest-url'),
+            gust: player.getAttribute('data-gust-manifest-url'),
+            thunder: player.getAttribute('data-thunder-manifest-url'),
+            feels_like: player.getAttribute('data-feels-like-manifest-url')
         };
         var image = player.querySelector('[data-gfs-image]');
         var loading = player.querySelector('[data-gfs-loading]');
@@ -270,7 +288,10 @@ $gfsCloudManifestUrl = isset($gfsCloudManifestUrl)
                 temperature: 'GFS temperaturkort gyldigt ',
                 pressure: 'GFS kort med lufttryk og nedbør gyldigt ',
                 wind: 'GFS vindkort gyldigt ',
-                cloud: 'GFS skykort gyldigt '
+                cloud: 'GFS skykort gyldigt ',
+                gust: 'GFS kort over vindstød gyldigt ',
+                thunder: 'GFS kort over tordenrisiko gyldigt ',
+                feels_like: 'GFS kort over oplevet temperatur gyldigt '
             };
             image.alt = descriptions[activeType] + formatDanishTime(product.valid_utc);
             valid.textContent = 'Gyldig ' + formatDanishTime(product.valid_utc);
@@ -361,19 +382,24 @@ $gfsCloudManifestUrl = isset($gfsCloudManifestUrl)
             fetchManifest(manifestUrls.temperature),
             fetchManifest(manifestUrls.pressure),
             fetchManifest(manifestUrls.wind),
-            fetchManifest(manifestUrls.cloud)
+            fetchManifest(manifestUrls.cloud),
+            fetchManifest(manifestUrls.gust),
+            fetchManifest(manifestUrls.thunder),
+            fetchManifest(manifestUrls.feels_like)
         ])
             .then(function (loaded) {
-                if (!loaded[0].products || !loaded[0].products.length ||
-                    !loaded[1].products || !loaded[1].products.length ||
-                    !loaded[2].products || !loaded[2].products.length ||
-                    !loaded[3].products || !loaded[3].products.length) {
-                    throw new Error('Et manifest indeholder ingen kort');
+                for (var manifestIndex = 0; manifestIndex < loaded.length; manifestIndex += 1) {
+                    if (!loaded[manifestIndex].products || !loaded[manifestIndex].products.length) {
+                        throw new Error('Et manifest indeholder ingen kort');
+                    }
                 }
                 manifests.temperature = loaded[0];
                 manifests.pressure = loaded[1];
                 manifests.wind = loaded[2];
                 manifests.cloud = loaded[3];
+                manifests.gust = loaded[4];
+                manifests.thunder = loaded[5];
+                manifests.feels_like = loaded[6];
                 selectMapType('temperature');
             })
             .catch(function () {
