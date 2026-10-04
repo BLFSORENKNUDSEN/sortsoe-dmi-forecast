@@ -327,54 +327,55 @@
     `;
   };
 
-  const extractId = suggestion => {
-    const candidates = [
-      suggestion?.data?.sted_id,
-      suggestion?.data?.stedid,
-      suggestion?.data?.id,
-      suggestion?.data?.sted?.id,
-      suggestion?.sted_id,
-      suggestion?.stedid,
-      suggestion?.id
-    ];
-    return candidates.find(v => typeof v === 'string' && v.length > 10) || null;
-  };
+  const placeCenter = item => {
+    const sted = item?.sted || item?.data?.sted || item?.data || {};
+    const vc = sted?.visueltcenter || item?.visueltcenter;
 
-  const centerFromGeometry = geometry => {
-    if (!geometry) return null;
-    if (geometry.type === 'Point') return {lon:Number(geometry.coordinates[0]), lat:Number(geometry.coordinates[1])};
-    const pts = [];
-    const walk = value => {
-      if (Array.isArray(value) && value.length >= 2 && typeof value[0] === 'number' && typeof value[1] === 'number') {
-        pts.push(value);
-      } else if (Array.isArray(value)) value.forEach(walk);
-    };
-    walk(geometry.coordinates);
-    if (!pts.length) return null;
-    const lons = pts.map(p=>Number(p[0])), lats = pts.map(p=>Number(p[1]));
-    return {lon:(Math.min(...lons)+Math.max(...lons))/2, lat:(Math.min(...lats)+Math.max(...lats))/2};
-  };
-
-  const resolveSuggestion = async suggestion => {
-    const name = suggestion?.tekst || suggestion?.forslagstekst || suggestion?.data?.navn || 'Valgt by';
-    const id = extractId(suggestion);
-    let url;
-    if (id) {
-      url = `https://api.dataforsyningen.dk/steder?id=${encodeURIComponent(id)}&format=geojson`;
-    } else {
-      const rawName = suggestion?.data?.navn || String(name).split(',')[0].trim();
-      url = `https://api.dataforsyningen.dk/steder?hovedtype=Bebyggelse&primærtnavn=${encodeURIComponent(rawName)}&format=geojson`;
+    if (Array.isArray(vc) && vc.length >= 2) {
+      return {lon:Number(vc[0]), lat:Number(vc[1])};
     }
-    const r = await fetch(url);
-    if (!r.ok) throw new Error(`Stedopslag HTTP ${r.status}`);
-    const geo = await r.json();
-    const feature = geo.features?.[0] || geo;
-    let center = null;
-    const vc = feature?.properties?.visueltcenter || feature?.properties?.visuelt_center;
-    if (vc?.coordinates) center = {lon:Number(vc.coordinates[0]), lat:Number(vc.coordinates[1])};
-    if (!center) center = centerFromGeometry(feature.geometry);
-    if (!center) throw new Error('Kunne ikke finde koordinater for byen');
-    return {name:String(name).split(',')[0], ...center};
+    if (vc?.coordinates && vc.coordinates.length >= 2) {
+      return {lon:Number(vc.coordinates[0]), lat:Number(vc.coordinates[1])};
+    }
+
+    const bbox = sted?.bbox || item?.bbox;
+    if (Array.isArray(bbox) && bbox.length >= 4) {
+      return {
+        lon:(Number(bbox[0]) + Number(bbox[2])) / 2,
+        lat:(Number(bbox[1]) + Number(bbox[3])) / 2
+      };
+    }
+    return null;
+  };
+
+  const placeName = item =>
+    item?.navn ||
+    item?.sted?.primærtnavn ||
+    item?.data?.navn ||
+    item?.data?.sted?.primærtnavn ||
+    'Valgt by';
+
+  const municipalityName = item => {
+    const sted = item?.sted || item?.data?.sted || item?.data || {};
+    const kommuner = sted?.kommuner || [];
+    return Array.isArray(kommuner) && kommuner.length ? kommuner[0]?.navn || '' : '';
+  };
+
+  const reversePlaceName = async (lat, lon) => {
+    const params = new URLSearchParams({
+      x:String(lat),
+      y:String(lon),
+      hovedtype:'Bebyggelse',
+      brugsprioritet:'primær',
+      per_side:'1'
+    });
+    params.append('nærmeste', '');
+
+    const r = await fetch(`https://api.dataforsyningen.dk/stednavne2?${params.toString()}`);
+    if (!r.ok) throw new Error(`Omvendt stedopslag HTTP ${r.status}`);
+    const rows = await r.json();
+    const item = Array.isArray(rows) ? rows[0] : null;
+    return item ? placeName(item) : 'Din position';
   };
 
   const setupSearch = () => {
@@ -382,26 +383,59 @@
     const box = root.querySelector('[data-city-suggestions]');
     let timer = null;
     let currentSuggestions = [];
+    let searchSerial = 0;
+
+    const showSuggestions = rows => {
+      currentSuggestions = rows;
+      box.innerHTML = rows.map((s,i) => {
+        const name = placeName(s);
+        const kommune = municipalityName(s);
+        const subtitle = kommune && kommune.toLowerCase() !== name.toLowerCase()
+          ? `<span>${esc(kommune)} Kommune</span>`
+          : '';
+        return `<button type="button" data-suggestion-index="${i}"><strong>${esc(name)}</strong>${subtitle}</button>`;
+      }).join('');
+      box.hidden = !rows.length;
+    };
 
     input.addEventListener('input', () => {
       clearTimeout(timer);
       const q = input.value.trim();
+      const serial = ++searchSerial;
+
       if (q.length < 2) {
         box.hidden = true;
         box.innerHTML = '';
+        currentSuggestions = [];
         return;
       }
+
       timer = setTimeout(async () => {
         try {
-          const url = `https://api.dataforsyningen.dk/stednavne2/autocomplete?q=${encodeURIComponent(q)}&hovedtype=Bebyggelse&per_side=8`;
-          const r = await fetch(url);
-          if (!r.ok) throw new Error(`Autocomplete HTTP ${r.status}`);
-          currentSuggestions = await r.json();
-          box.innerHTML = currentSuggestions.slice(0,8).map((s,i) => `<button type="button" data-suggestion-index="${i}">${esc(s.forslagstekst || s.tekst || s.data?.navn || '')}</button>`).join('');
-          box.hidden = !currentSuggestions.length;
+          const params = new URLSearchParams({
+            q,
+            hovedtype:'Bebyggelse',
+            brugsprioritet:'primær',
+            per_side:'8'
+          });
+          params.append('autocomplete', '');
+
+          const r = await fetch(`https://api.dataforsyningen.dk/stednavne2?${params.toString()}`);
+          if (!r.ok) throw new Error(`Stednavnesøgning HTTP ${r.status}`);
+          const rows = await r.json();
+          if (serial !== searchSerial) return;
+
+          const usable = (Array.isArray(rows) ? rows : [])
+            .filter(s => placeCenter(s))
+            .slice(0,8);
+
+          showSuggestions(usable);
         } catch (err) {
           console.error('Bysøgning:', err);
-          box.hidden = true;
+          if (serial === searchSerial) {
+            box.hidden = true;
+            currentSuggestions = [];
+          }
         }
       }, 220);
     });
@@ -409,15 +443,32 @@
     box.addEventListener('click', async e => {
       const btn = e.target.closest('[data-suggestion-index]');
       if (!btn) return;
+
       const suggestion = currentSuggestions[Number(btn.dataset.suggestionIndex)];
+      const center = placeCenter(suggestion);
+      const name = placeName(suggestion);
+
       box.hidden = true;
-      input.value = suggestion?.tekst || suggestion?.forslagstekst || '';
+      input.value = name;
+
+      if (!center || !Number.isFinite(center.lat) || !Number.isFinite(center.lon)) {
+        status('Kunne ikke finde koordinater for byen.');
+        return;
+      }
+
       try {
-        const place = await resolveSuggestion(suggestion);
-        await loadForecastForCoords(place.lat, place.lon, place.name);
+        await loadForecastForCoords(center.lat, center.lon, name);
       } catch (err) {
         console.error(err);
-        status('Byen kunne ikke slås op. Prøv et andet navn.');
+        status('Kunne ikke hente vejrudsigten for byen.');
+      }
+    });
+
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !box.hidden && currentSuggestions.length) {
+        e.preventDefault();
+        const first = box.querySelector('[data-suggestion-index="0"]');
+        if (first) first.click();
       }
     });
 
@@ -431,17 +482,28 @@
       status('Din browser understøtter ikke positionsbestemmelse.');
       return;
     }
+
     status('Finder din position…');
     navigator.geolocation.getCurrentPosition(
-      pos => loadForecastForCoords(
-        pos.coords.latitude,
-        pos.coords.longitude,
-        'Din position'
-      ).catch(err => {
-        console.error(err);
-        status('Kunne ikke hente vejr for din position. Viser Sortsø Strand.');
-        loadSortsoe().catch(console.error);
-      }),
+      async pos => {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        let name = 'Din position';
+
+        try {
+          name = await reversePlaceName(lat, lon);
+        } catch (err) {
+          console.warn('Kunne ikke finde stednavn for position:', err);
+        }
+
+        try {
+          await loadForecastForCoords(lat, lon, name);
+        } catch (err) {
+          console.error(err);
+          status('Kunne ikke hente vejr for din position. Viser Sortsø Strand.');
+          loadSortsoe().catch(console.error);
+        }
+      },
       err => {
         console.warn('Geolocation:', err);
         status('');
