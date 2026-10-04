@@ -1,5 +1,5 @@
 (() => {
-  const FORECAST_FRONTEND_VERSION = '20261004-6';
+  const FORECAST_FRONTEND_VERSION = '20261004-7';
   console.info('Strandvejr forecast frontend', FORECAST_FRONTEND_VERSION);
   const RAW_BASE = window.SORTSOE_FORECAST_BASE_URL || 'https://raw.githubusercontent.com/BLFSORENKNUDSEN/sortsoe-dmi-forecast/main/data';
   const SORTSOE_URL = window.SORTSOE_FORECAST_URL || `${RAW_BASE}/sortsoe.json`;
@@ -363,17 +363,29 @@
     return Array.isArray(kommuner) && kommuner.length ? kommuner[0]?.navn || '' : '';
   };
 
+  const POSTCODE_API = 'https://dawa.companydata.dk';
+  let postcodeCache = null;
+
   const reversePlaceName = async (lat, lon) => {
+    // Reverse endpoint expects x=longitude, y=latitude.
     const url =
-      'https://api.dataforsyningen.dk/postnumre/reverse' +
-      '?x=' + encodeURIComponent(lat) +
-      '&y=' + encodeURIComponent(lon) +
-      '&srid=4326';
+      POSTCODE_API + '/postnumre/reverse' +
+      '?x=' + encodeURIComponent(lon) +
+      '&y=' + encodeURIComponent(lat);
 
     const r = await fetch(url);
     if (!r.ok) throw new Error(`Postnummer reverse HTTP ${r.status}`);
     const item = await r.json();
     return item?.navn || 'Din position';
+  };
+
+  const loadPostcodes = async () => {
+    if (postcodeCache) return postcodeCache;
+    const r = await fetch(POSTCODE_API + '/postnumre?per_side=2000');
+    if (!r.ok) throw new Error(`Postnummerliste HTTP ${r.status}`);
+    const rows = await r.json();
+    postcodeCache = Array.isArray(rows) ? rows : [];
+    return postcodeCache;
   };
 
   const postcodeCenter = item => {
@@ -390,6 +402,18 @@
     }
     return null;
   };
+
+  const getPostcodeDetails = async nr => {
+    const r = await fetch(POSTCODE_API + '/postnumre/' + encodeURIComponent(nr));
+    if (!r.ok) throw new Error(`Postnummeropslag HTTP ${r.status}`);
+    return r.json();
+  };
+
+  const normalize = value =>
+    String(value || '')
+      .toLocaleLowerCase('da-DK')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
 
   const setupSearch = () => {
     const input = root.querySelector('[data-city-search]');
@@ -422,20 +446,27 @@
 
       timer = setTimeout(async () => {
         try {
-          const url =
-            'https://api.dataforsyningen.dk/postnumre' +
-            '?q=' + encodeURIComponent(q) +
-            '&per_side=10' +
-            '&srid=4326';
-
-          const r = await fetch(url);
-          if (!r.ok) throw new Error(`Postnummersøgning HTTP ${r.status}`);
-          const rows = await r.json();
+          const all = await loadPostcodes();
           if (serial !== searchSerial) return;
 
-          const usable = (Array.isArray(rows) ? rows : [])
-            .filter(item => item?.navn && postcodeCenter(item))
-            .slice(0,8);
+          const nq = normalize(q);
+          const starts = [];
+          const contains = [];
+
+          for (const item of all) {
+            const name = normalize(item?.navn);
+            if (!name) continue;
+            if (name.startsWith(nq)) starts.push(item);
+            else if (name.includes(nq)) contains.push(item);
+          }
+
+          const seen = new Set();
+          const usable = [...starts, ...contains].filter(item => {
+            const key = item.nr || item.navn;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          }).slice(0,8);
 
           showSuggestions(usable);
         } catch (err) {
@@ -445,7 +476,7 @@
             currentSuggestions = [];
           }
         }
-      }, 220);
+      }, 180);
     });
 
     box.addEventListener('click', async e => {
@@ -453,18 +484,18 @@
       if (!btn) return;
 
       const item = currentSuggestions[Number(btn.dataset.suggestionIndex)];
-      const center = postcodeCenter(item);
-      const name = item?.navn || 'Valgt by';
-
       box.hidden = true;
-      input.value = name;
-
-      if (!center || !Number.isFinite(center.lat) || !Number.isFinite(center.lon)) {
-        status('Kunne ikke finde koordinater for byen.');
-        return;
-      }
+      input.value = item?.navn || '';
 
       try {
+        const details = await getPostcodeDetails(item.nr);
+        const center = postcodeCenter(details);
+        const name = details?.navn || item?.navn || 'Valgt by';
+
+        if (!center || !Number.isFinite(center.lat) || !Number.isFinite(center.lon)) {
+          throw new Error('Postnummeret har ingen brugbare koordinater');
+        }
+
         await loadForecastForCoords(center.lat, center.lon, name);
       } catch (err) {
         console.error('Valg af by:', err);
