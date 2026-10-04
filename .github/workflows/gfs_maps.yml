@@ -9,6 +9,7 @@ on:
       - "gfs/generate_temperature_maps.py"
       - "gfs/generate_pressure_precipitation_maps.py"
       - "gfs/generate_wind_cloud_maps.py"
+      - "gfs/generate_gust_thunder_feelslike_maps.py"
       - "gfs/requirements.txt"
       - ".github/workflows/gfs_maps.yml"
   schedule:
@@ -51,6 +52,9 @@ jobs:
 
       - name: Generate GFS wind and cloud maps
         run: python gfs/generate_wind_cloud_maps.py
+
+      - name: Generate GFS gust, thunder and feels like maps
+        run: python gfs/generate_gust_thunder_feelslike_maps.py
 
       - name: Commit GFS products
         run: |
