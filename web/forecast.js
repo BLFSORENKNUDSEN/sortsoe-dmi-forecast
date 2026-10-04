@@ -362,94 +362,31 @@
   };
 
   const reversePlaceName = async (lat, lon) => {
-    // For geographic lookup DAWA recommends the "steder" resource.
-    // In WGS84 DAWA uses x=latitude and y=longitude.
     const url =
-      'https://api.dataforsyningen.dk/steder' +
+      'https://api.dataforsyningen.dk/postnumre/reverse' +
       '?x=' + encodeURIComponent(lat) +
       '&y=' + encodeURIComponent(lon) +
-      '&hovedtype=Bebyggelse' +
-      '&per_side=1' +
-      '&n%C3%A6rmeste';
+      '&srid=4326';
 
     const r = await fetch(url);
-    if (!r.ok) throw new Error(`Omvendt stedopslag HTTP ${r.status}`);
-    const rows = await r.json();
-    const item = Array.isArray(rows) ? rows[0] : null;
-    return item?.primærtnavn || item?.navn || 'Din position';
+    if (!r.ok) throw new Error(`Postnummer reverse HTTP ${r.status}`);
+    const item = await r.json();
+    return item?.navn || 'Din position';
   };
 
-  const autocompleteId = suggestion => {
-    const d = suggestion?.data || {};
-    const candidates = [
-      d.sted_id,
-      d.stedid,
-      d.id,
-      d.sted?.id,
-      suggestion?.sted_id,
-      suggestion?.stedid,
-      suggestion?.id
-    ];
-    return candidates.find(v => typeof v === 'string' && v.length > 10) || null;
-  };
-
-  const autocompleteName = suggestion =>
-    suggestion?.tekst ||
-    suggestion?.forslagstekst ||
-    suggestion?.data?.navn ||
-    suggestion?.data?.primærtnavn ||
-    suggestion?.data?.sted?.primærtnavn ||
-    'Valgt by';
-
-  const resolveAutocompleteSuggestion = async suggestion => {
-    const id = autocompleteId(suggestion);
-    const rawName = autocompleteName(suggestion);
-    const cleanName = String(rawName).split(',')[0].trim();
-
-    let place = null;
-
-    if (id) {
-      const r = await fetch(
-        'https://api.dataforsyningen.dk/steder/' + encodeURIComponent(id)
-      );
-      if (!r.ok) throw new Error(`Stedopslag HTTP ${r.status}`);
-      place = await r.json();
-    } else {
-      const url =
-        'https://api.dataforsyningen.dk/steder' +
-        '?hovedtype=Bebyggelse' +
-        '&prim%C3%A6rtnavn=' + encodeURIComponent(cleanName) +
-        '&per_side=5';
-      const r = await fetch(url);
-      if (!r.ok) throw new Error(`Stedopslag HTTP ${r.status}`);
-      const rows = await r.json();
-      place = Array.isArray(rows) ? rows[0] : null;
-    }
-
-    if (!place) throw new Error('Stedet blev ikke fundet');
-
-    const vc = place.visueltcenter;
-    let lat = null;
-    let lon = null;
-
+  const postcodeCenter = item => {
+    const vc = item?.visueltcenter;
     if (Array.isArray(vc) && vc.length >= 2) {
-      // DAWA visueltcenter in WGS84 is [longitude, latitude].
-      lon = Number(vc[0]);
-      lat = Number(vc[1]);
-    } else if (Array.isArray(place.bbox) && place.bbox.length >= 4) {
-      lon = (Number(place.bbox[0]) + Number(place.bbox[2])) / 2;
-      lat = (Number(place.bbox[1]) + Number(place.bbox[3])) / 2;
+      return {lon:Number(vc[0]), lat:Number(vc[1])};
     }
-
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
-      throw new Error('Stedet har ingen brugbare koordinater');
+    const bbox = item?.bbox;
+    if (Array.isArray(bbox) && bbox.length >= 4) {
+      return {
+        lon:(Number(bbox[0]) + Number(bbox[2])) / 2,
+        lat:(Number(bbox[1]) + Number(bbox[3])) / 2
+      };
     }
-
-    return {
-      name: place.primærtnavn || cleanName,
-      lat,
-      lon
-    };
+    return null;
   };
 
   const setupSearch = () => {
@@ -462,8 +399,9 @@
     const showSuggestions = rows => {
       currentSuggestions = rows;
       box.innerHTML = rows.map((s,i) => {
-        const text = s.forslagstekst || s.tekst || s.data?.navn || '';
-        return `<button type="button" data-suggestion-index="${i}">${esc(text)}</button>`;
+        const label = s?.navn || '';
+        const nr = s?.nr ? `<span>${esc(s.nr)}</span>` : '';
+        return `<button type="button" data-suggestion-index="${i}"><strong>${esc(label)}</strong>${nr}</button>`;
       }).join('');
       box.hidden = !rows.length;
     };
@@ -483,18 +421,21 @@
       timer = setTimeout(async () => {
         try {
           const url =
-            'https://api.dataforsyningen.dk/stednavne2/autocomplete' +
+            'https://api.dataforsyningen.dk/postnumre' +
             '?q=' + encodeURIComponent(q) +
-            '&hovedtype=Bebyggelse' +
-            '&brugsprioritet=prim%C3%A6r' +
-            '&per_side=8';
+            '&per_side=10' +
+            '&srid=4326';
 
           const r = await fetch(url);
-          if (!r.ok) throw new Error(`Stednavne autocomplete HTTP ${r.status}`);
+          if (!r.ok) throw new Error(`Postnummersøgning HTTP ${r.status}`);
           const rows = await r.json();
           if (serial !== searchSerial) return;
 
-          showSuggestions((Array.isArray(rows) ? rows : []).slice(0,8));
+          const usable = (Array.isArray(rows) ? rows : [])
+            .filter(item => item?.navn && postcodeCenter(item))
+            .slice(0,8);
+
+          showSuggestions(usable);
         } catch (err) {
           console.error('Bysøgning:', err);
           if (serial === searchSerial) {
@@ -509,14 +450,20 @@
       const btn = e.target.closest('[data-suggestion-index]');
       if (!btn) return;
 
-      const suggestion = currentSuggestions[Number(btn.dataset.suggestionIndex)];
+      const item = currentSuggestions[Number(btn.dataset.suggestionIndex)];
+      const center = postcodeCenter(item);
+      const name = item?.navn || 'Valgt by';
+
       box.hidden = true;
-      input.value = autocompleteName(suggestion);
+      input.value = name;
+
+      if (!center || !Number.isFinite(center.lat) || !Number.isFinite(center.lon)) {
+        status('Kunne ikke finde koordinater for byen.');
+        return;
+      }
 
       try {
-        const place = await resolveAutocompleteSuggestion(suggestion);
-        input.value = place.name;
-        await loadForecastForCoords(place.lat, place.lon, place.name);
+        await loadForecastForCoords(center.lat, center.lon, name);
       } catch (err) {
         console.error('Valg af by:', err);
         status('Kunne ikke hente vejrudsigten for byen.');
@@ -552,7 +499,7 @@
         try {
           name = await reversePlaceName(lat, lon);
         } catch (err) {
-          console.warn('Kunne ikke finde stednavn for position:', err);
+          console.warn('Kunne ikke finde bynavn for position:', err);
         }
 
         try {
