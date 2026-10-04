@@ -2,7 +2,7 @@
   "source": "NOAA GFS 0.25 degree",
   "parameter": "total cloud cover",
   "run_utc": "2026-10-04T06:00:00+00:00",
-  "generated_utc": "2026-10-04T11:09:32.781032+00:00",
+  "generated_utc": "2026-10-04T12:15:49.184355+00:00",
   "extent": {
     "west": -12.0,
     "east": 38.0,
