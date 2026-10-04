@@ -1,4 +1,4 @@
-name: Update Sortsoe STAC forecast
+name: Update Denmark STAC forecast
 
 on:
   workflow_dispatch:
@@ -6,7 +6,7 @@ on:
     branches:
       - main
     paths:
-      - "scripts/fetch_stac_forecast.py"
+      - "scripts/fetch_stac_denmark.py"
       - ".github/workflows/forecast.yml"
   schedule:
     - cron: "25 2,5,8,11,14,17,20,23 * * *"
@@ -15,7 +15,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: sortsoe-stac-forecast
+  group: denmark-stac-forecast
   cancel-in-progress: true
 
 jobs:
@@ -36,19 +36,19 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libeccodes0 libeccodes-dev
           python -m pip install --upgrade pip
-          pip install eccodes
+          pip install eccodes numpy
 
-      - name: Build DMI HARMONIE forecast
-        run: python scripts/fetch_stac_forecast.py
+      - name: Build Denmark DMI HARMONIE forecast grid
+        run: python scripts/fetch_stac_denmark.py
 
-      - name: Commit forecast JSON
+      - name: Commit forecast data
         run: |
-          if [ -z "$(git status --porcelain -- data/sortsoe.json)" ]; then
+          if [ -z "$(git status --porcelain -- data/sortsoe.json data/grid)" ]; then
             echo "No forecast change"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/sortsoe.json
-          git commit -m "Update Sortsoe STAC forecast"
+          git add data/sortsoe.json data/grid
+          git commit -m "Update Denmark STAC forecast"
           git push
