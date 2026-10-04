@@ -362,20 +362,94 @@
   };
 
   const reversePlaceName = async (lat, lon) => {
-    const params = new URLSearchParams({
-      x:String(lat),
-      y:String(lon),
-      hovedtype:'Bebyggelse',
-      brugsprioritet:'primær',
-      per_side:'1'
-    });
-    params.append('nærmeste', '');
+    // For geographic lookup DAWA recommends the "steder" resource.
+    // In WGS84 DAWA uses x=latitude and y=longitude.
+    const url =
+      'https://api.dataforsyningen.dk/steder' +
+      '?x=' + encodeURIComponent(lat) +
+      '&y=' + encodeURIComponent(lon) +
+      '&hovedtype=Bebyggelse' +
+      '&per_side=1' +
+      '&n%C3%A6rmeste';
 
-    const r = await fetch(`https://api.dataforsyningen.dk/stednavne2?${params.toString()}`);
+    const r = await fetch(url);
     if (!r.ok) throw new Error(`Omvendt stedopslag HTTP ${r.status}`);
     const rows = await r.json();
     const item = Array.isArray(rows) ? rows[0] : null;
-    return item ? placeName(item) : 'Din position';
+    return item?.primærtnavn || item?.navn || 'Din position';
+  };
+
+  const autocompleteId = suggestion => {
+    const d = suggestion?.data || {};
+    const candidates = [
+      d.sted_id,
+      d.stedid,
+      d.id,
+      d.sted?.id,
+      suggestion?.sted_id,
+      suggestion?.stedid,
+      suggestion?.id
+    ];
+    return candidates.find(v => typeof v === 'string' && v.length > 10) || null;
+  };
+
+  const autocompleteName = suggestion =>
+    suggestion?.tekst ||
+    suggestion?.forslagstekst ||
+    suggestion?.data?.navn ||
+    suggestion?.data?.primærtnavn ||
+    suggestion?.data?.sted?.primærtnavn ||
+    'Valgt by';
+
+  const resolveAutocompleteSuggestion = async suggestion => {
+    const id = autocompleteId(suggestion);
+    const rawName = autocompleteName(suggestion);
+    const cleanName = String(rawName).split(',')[0].trim();
+
+    let place = null;
+
+    if (id) {
+      const r = await fetch(
+        'https://api.dataforsyningen.dk/steder/' + encodeURIComponent(id)
+      );
+      if (!r.ok) throw new Error(`Stedopslag HTTP ${r.status}`);
+      place = await r.json();
+    } else {
+      const url =
+        'https://api.dataforsyningen.dk/steder' +
+        '?hovedtype=Bebyggelse' +
+        '&prim%C3%A6rtnavn=' + encodeURIComponent(cleanName) +
+        '&per_side=5';
+      const r = await fetch(url);
+      if (!r.ok) throw new Error(`Stedopslag HTTP ${r.status}`);
+      const rows = await r.json();
+      place = Array.isArray(rows) ? rows[0] : null;
+    }
+
+    if (!place) throw new Error('Stedet blev ikke fundet');
+
+    const vc = place.visueltcenter;
+    let lat = null;
+    let lon = null;
+
+    if (Array.isArray(vc) && vc.length >= 2) {
+      // DAWA visueltcenter in WGS84 is [longitude, latitude].
+      lon = Number(vc[0]);
+      lat = Number(vc[1]);
+    } else if (Array.isArray(place.bbox) && place.bbox.length >= 4) {
+      lon = (Number(place.bbox[0]) + Number(place.bbox[2])) / 2;
+      lat = (Number(place.bbox[1]) + Number(place.bbox[3])) / 2;
+    }
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+      throw new Error('Stedet har ingen brugbare koordinater');
+    }
+
+    return {
+      name: place.primærtnavn || cleanName,
+      lat,
+      lon
+    };
   };
 
   const setupSearch = () => {
@@ -388,12 +462,8 @@
     const showSuggestions = rows => {
       currentSuggestions = rows;
       box.innerHTML = rows.map((s,i) => {
-        const name = placeName(s);
-        const kommune = municipalityName(s);
-        const subtitle = kommune && kommune.toLowerCase() !== name.toLowerCase()
-          ? `<span>${esc(kommune)} Kommune</span>`
-          : '';
-        return `<button type="button" data-suggestion-index="${i}"><strong>${esc(name)}</strong>${subtitle}</button>`;
+        const text = s.forslagstekst || s.tekst || s.data?.navn || '';
+        return `<button type="button" data-suggestion-index="${i}">${esc(text)}</button>`;
       }).join('');
       box.hidden = !rows.length;
     };
@@ -412,24 +482,19 @@
 
       timer = setTimeout(async () => {
         try {
-          const params = new URLSearchParams({
-            q,
-            hovedtype:'Bebyggelse',
-            brugsprioritet:'primær',
-            per_side:'8'
-          });
-          params.append('autocomplete', '');
+          const url =
+            'https://api.dataforsyningen.dk/stednavne2/autocomplete' +
+            '?q=' + encodeURIComponent(q) +
+            '&hovedtype=Bebyggelse' +
+            '&brugsprioritet=prim%C3%A6r' +
+            '&per_side=8';
 
-          const r = await fetch(`https://api.dataforsyningen.dk/stednavne2?${params.toString()}`);
-          if (!r.ok) throw new Error(`Stednavnesøgning HTTP ${r.status}`);
+          const r = await fetch(url);
+          if (!r.ok) throw new Error(`Stednavne autocomplete HTTP ${r.status}`);
           const rows = await r.json();
           if (serial !== searchSerial) return;
 
-          const usable = (Array.isArray(rows) ? rows : [])
-            .filter(s => placeCenter(s))
-            .slice(0,8);
-
-          showSuggestions(usable);
+          showSuggestions((Array.isArray(rows) ? rows : []).slice(0,8));
         } catch (err) {
           console.error('Bysøgning:', err);
           if (serial === searchSerial) {
@@ -445,21 +510,15 @@
       if (!btn) return;
 
       const suggestion = currentSuggestions[Number(btn.dataset.suggestionIndex)];
-      const center = placeCenter(suggestion);
-      const name = placeName(suggestion);
-
       box.hidden = true;
-      input.value = name;
-
-      if (!center || !Number.isFinite(center.lat) || !Number.isFinite(center.lon)) {
-        status('Kunne ikke finde koordinater for byen.');
-        return;
-      }
+      input.value = autocompleteName(suggestion);
 
       try {
-        await loadForecastForCoords(center.lat, center.lon, name);
+        const place = await resolveAutocompleteSuggestion(suggestion);
+        input.value = place.name;
+        await loadForecastForCoords(place.lat, place.lon, place.name);
       } catch (err) {
-        console.error(err);
+        console.error('Valg af by:', err);
         status('Kunne ikke hente vejrudsigten for byen.');
       }
     });
