@@ -1,5 +1,5 @@
 (() => {
-  const FORECAST_FRONTEND_VERSION = '20261004-9';
+  const FORECAST_FRONTEND_VERSION = '20261004-10';
   console.info('Strandvejr forecast frontend', FORECAST_FRONTEND_VERSION);
   const RAW_BASE = window.SORTSOE_FORECAST_BASE_URL || 'https://raw.githubusercontent.com/BLFSORENKNUDSEN/sortsoe-dmi-forecast/main/data';
   const SORTSOE_URL = window.SORTSOE_FORECAST_URL || `${RAW_BASE}/sortsoe.json`;
@@ -441,9 +441,7 @@
       currentSuggestions = rows;
       box.innerHTML = rows.map((p,i) => {
         const name = p?.name || '';
-        const admin = p?.adminName1 ? `<span>${esc(p.adminName1)}</span>` : '';
-        const type = p?.fcodeName ? `<small>${esc(p.fcodeName)}</small>` : '';
-        return `<button type="button" data-suggestion-index="${i}"><strong>${esc(name)}</strong>${admin}${type}</button>`;
+        return `<button type="button" data-suggestion-index="${i}"><strong>${esc(name)}</strong></button>`;
       }).join('');
       box.hidden = !rows.length;
     };
