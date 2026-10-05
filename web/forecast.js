@@ -1,5 +1,5 @@
 (() => {
-  const FORECAST_FRONTEND_VERSION = '20261004-11';
+  const FORECAST_FRONTEND_VERSION = '20261005-1';
   console.info('Strandvejr forecast frontend', FORECAST_FRONTEND_VERSION);
   const RAW_BASE = window.SORTSOE_FORECAST_BASE_URL || 'https://raw.githubusercontent.com/BLFSORENKNUDSEN/sortsoe-dmi-forecast/main/data';
   const SORTSOE_URL = window.SORTSOE_FORECAST_URL || `${RAW_BASE}/sortsoe.json`;
@@ -265,9 +265,23 @@
   const render = data => {
     const content = root.querySelector('[data-forecast-content]');
     if (!content) return;
-    const hours = data.hours || [];
-    const days = data.days || [];
-    const current = hours[0] || data.currentForecast || {};
+
+    // Vis kun prognosepunkter, der ligger efter det aktuelle tidspunkt
+    // i brugerens browser. Dermed forsvinder både tidligere timer og
+    // døgn, som ikke længere har fremtidige prognosepunkter.
+    const now = Date.now();
+    const hours = (data.hours || []).filter(h => {
+      const t = Date.parse(h.time);
+      return Number.isFinite(t) && t > now;
+    });
+    const days = summarizeDays(hours);
+    const current = hours[0] || {};
+    const viewData = {
+      ...data,
+      hours,
+      days,
+      currentForecast: current
+    };
     const modelPoint = data.location?.modelPoint;
     const pointText = modelPoint
       ? `DMI-grid ${Number(modelPoint.latitude).toFixed(2)}°, ${Number(modelPoint.longitude).toFixed(2)}°`
@@ -295,9 +309,9 @@
         </div>
       </div>
 
-      <div class="forecast-text">${esc(weatherText(data))}</div>
+      <div class="forecast-text">${esc(weatherText(viewData))}</div>
 
-      <h3>De kommende 60 timer</h3>
+      <h3>De kommende timer</h3>
       <div class="forecast-hours">
         ${hours.map((h,i) => `
           <article class="forecast-hour">
