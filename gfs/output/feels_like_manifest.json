@@ -2,7 +2,7 @@
   "source": "NOAA GFS 0.25 degree",
   "parameter": "calculated feels like temperature",
   "run_utc": "2026-10-05T18:00:00+00:00",
-  "generated_utc": "2026-10-05T23:12:27.226327+00:00",
+  "generated_utc": "2026-10-06T03:05:17.703084+00:00",
   "extent": {
     "west": -12.0,
     "east": 38.0,
