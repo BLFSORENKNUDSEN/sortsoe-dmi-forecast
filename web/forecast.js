@@ -1,5 +1,5 @@
 (() => {
-  const FORECAST_FRONTEND_VERSION = '20261009-2';
+  const FORECAST_FRONTEND_VERSION = '20261009-3';
   console.info('Strandvejr forecast frontend', FORECAST_FRONTEND_VERSION);
   const RAW_BASE = window.SORTSOE_FORECAST_BASE_URL || 'https://raw.githubusercontent.com/BLFSORENKNUDSEN/sortsoe-dmi-forecast/main/data';
   const SORTSOE_URL = window.SORTSOE_FORECAST_URL || `${RAW_BASE}/sortsoe.json`;
@@ -367,8 +367,38 @@
         lastDate = key;
       });
 
+      const drawMeteogramWeatherIcons = chart => {
+        chart.container.querySelectorAll('.forecast-chart-weather-icon-overlay').forEach(el => el.remove());
+
+        hours.forEach(h => {
+          const ts = Date.parse(h.time);
+          if (!Number.isFinite(ts)) return;
+
+          const x = chart.xAxis[0].toPixels(ts);
+          const minX = chart.plotLeft - 18;
+          const maxX = chart.plotLeft + chart.plotWidth - 22;
+          const left = Math.max(minX, Math.min(x - 20, maxX));
+
+          const el = document.createElement('div');
+          el.className = 'forecast-chart-weather-icon-overlay';
+          el.style.left = left + 'px';
+          el.style.top = '17px';
+          el.innerHTML = svg(h.weather, h.time);
+          chart.container.appendChild(el);
+        });
+      };
+
       const chart = Highcharts.chart(container, {
-        chart:{backgroundColor:bg,height:390,marginTop:72},
+        chart:{
+          backgroundColor:bg,
+          height:390,
+          marginTop:82,
+          events:{
+            render:function(){
+              drawMeteogramWeatherIcons(this);
+            }
+          }
+        },
         title:{text:null},
         credits:{enabled:false},
         xAxis:{
@@ -422,16 +452,6 @@
           yAxis:1,
           zIndex:1
         }]
-      }, chart => {
-        const sampleEvery = 2;
-        hours.forEach((h,i) => {
-          if (i % sampleEvery !== 0) return;
-          const x = chart.xAxis[0].toPixels(Date.parse(h.time));
-          const html = '<div class="forecast-chart-weather-icon">' + svg(h.weather, h.time) + '</div>';
-          chart.renderer.label(html, x - 19, chart.plotTop - 56, null, null, null, true)
-            .attr({zIndex:7})
-            .add();
-        });
       });
 
       Highcharts.chart(windContainer, {
