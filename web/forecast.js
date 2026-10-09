@@ -487,7 +487,7 @@
 
     const nextRain = Number(current.rainMm || 0);
     const rainNotice = nextRain >= 0.1
-      ? `<div class="forecast-rain-notice"><span class="forecast-rain-drop">💧</span>Der forventes <strong>${nextRain.toFixed(1)} mm</strong> nedbør frem mod kl. ${fmtHour(current.time)}.</div>`
+      ? `<div class="forecast-rain-notice"><span class="forecast-rain-drop" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2C9 7 6 10.5 6 15a6 6 0 0 0 12 0c0-4.5-3-8-6-13Z"/></svg></span>Der forventes <strong>${nextRain.toFixed(1)} mm</strong> nedbør frem mod kl. ${fmtHour(current.time)}.</div>`
       : '';
 
     content.innerHTML = `
@@ -569,8 +569,8 @@
 
                 <div class="forecast-day-hours" ${dayIndex === 0 ? '' : 'hidden'}>
                   <div class="forecast-sun-info">
-                    <span class="forecast-sunrise"><b>☀</b> ${formatSunTime(rise)}</span>
-                    <span class="forecast-sunset"><b>☀</b> ${formatSunTime(set)}</span>
+                    <span class="forecast-sunrise"><span class="forecast-sun-mark forecast-sunrise-mark" aria-hidden="true"></span>${formatSunTime(rise)}</span>
+                    <span class="forecast-sunset"><span class="forecast-sun-mark forecast-sunset-mark" aria-hidden="true"></span>${formatSunTime(set)}</span>
                     <span>${esc(dayLengthText(rise,set))}</span>
                   </div>
                   <div class="forecast-hours-table-wrap">
