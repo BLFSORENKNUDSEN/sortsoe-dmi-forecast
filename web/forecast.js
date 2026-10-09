@@ -1,5 +1,5 @@
 (() => {
-  const FORECAST_FRONTEND_VERSION = '20261009-1';
+  const FORECAST_FRONTEND_VERSION = '20261009-2';
   console.info('Strandvejr forecast frontend', FORECAST_FRONTEND_VERSION);
   const RAW_BASE = window.SORTSOE_FORECAST_BASE_URL || 'https://raw.githubusercontent.com/BLFSORENKNUDSEN/sortsoe-dmi-forecast/main/data';
   const SORTSOE_URL = window.SORTSOE_FORECAST_URL || `${RAW_BASE}/sortsoe.json`;
@@ -264,6 +264,209 @@
     return text;
   };
 
+  const dayOfYear = date => {
+    const start = new Date(date.getFullYear(), 0, 0);
+    return Math.floor((date - start) / 86400000);
+  };
+
+  const sunTime = (dateStr, lat, lon, sunrise) => {
+    const d = new Date(dateStr + 'T12:00:00');
+    const N = dayOfYear(d);
+    const lngHour = lon / 15;
+    const t = N + (((sunrise ? 6 : 18) - lngHour) / 24);
+    const M = (0.9856 * t) - 3.289;
+    let L = M + (1.916 * Math.sin(M * Math.PI / 180)) + (0.020 * Math.sin(2 * M * Math.PI / 180)) + 282.634;
+    L = (L + 360) % 360;
+    let RA = Math.atan(0.91764 * Math.tan(L * Math.PI / 180)) * 180 / Math.PI;
+    RA = (RA + 360) % 360;
+    const Lquadrant = Math.floor(L / 90) * 90;
+    const RAquadrant = Math.floor(RA / 90) * 90;
+    RA = (RA + (Lquadrant - RAquadrant)) / 15;
+
+    const sinDec = 0.39782 * Math.sin(L * Math.PI / 180);
+    const cosDec = Math.cos(Math.asin(sinDec));
+    const cosH =
+      (Math.cos(90.833 * Math.PI / 180) - (sinDec * Math.sin(lat * Math.PI / 180))) /
+      (cosDec * Math.cos(lat * Math.PI / 180));
+
+    if (cosH > 1 || cosH < -1) return null;
+
+    let H = sunrise
+      ? 360 - (Math.acos(cosH) * 180 / Math.PI)
+      : (Math.acos(cosH) * 180 / Math.PI);
+    H /= 15;
+
+    const T = H + RA - (0.06571 * t) - 6.622;
+    let UT = T - lngHour;
+    UT = (UT + 24) % 24;
+
+    const hours = Math.floor(UT);
+    const minutes = Math.floor((UT - hours) * 60);
+    return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), hours, minutes));
+  };
+
+  const formatSunTime = date => date
+    ? new Intl.DateTimeFormat('da-DK', {hour:'2-digit', minute:'2-digit'}).format(date)
+    : '–';
+
+  const dayLengthText = (rise, set) => {
+    if (!rise || !set) return '';
+    let ms = set.getTime() - rise.getTime();
+    if (ms < 0) ms += 86400000;
+    const h = Math.floor(ms / 3600000);
+    const m = Math.round((ms % 3600000) / 60000);
+    return `Dagen varer ${h} t. og ${m} min.`;
+  };
+
+  const waitForHighcharts = callback => {
+    let tries = 0;
+    const tick = () => {
+      if (window.Highcharts) return callback(window.Highcharts);
+      if (++tries < 30) setTimeout(tick, 200);
+    };
+    tick();
+  };
+
+  const renderMeteogram = (hours) => {
+    if (!hours.length) return;
+
+    waitForHighcharts(Highcharts => {
+      const container = document.getElementById('forecastMeteogram');
+      const windContainer = document.getElementById('forecastWindChart');
+      if (!container || !windContainer) return;
+
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      const textColor = isDark ? '#f8fafc' : '#334155';
+      const gridColor = isDark ? 'rgba(255,255,255,.12)' : 'rgba(15,23,42,.12)';
+      const bg = 'transparent';
+
+      const tempData = hours.map(h => [Date.parse(h.time), Number(h.temperature)]);
+      const rainData = hours.map(h => [Date.parse(h.time), Number(h.rainMm || 0)]);
+      const windData = hours.map(h => [Date.parse(h.time), Number(h.wind || 0)]);
+
+      const plotLines = [];
+      let lastDate = null;
+      hours.forEach(h => {
+        const d = new Date(h.time);
+        const key = d.toDateString();
+        if (lastDate && key !== lastDate) {
+          plotLines.push({
+            value: d.setHours(0,0,0,0),
+            width: 1,
+            color: gridColor,
+            zIndex: 2,
+            label: {
+              text: new Intl.DateTimeFormat('da-DK', {weekday:'long', day:'numeric', month:'short'}).format(d),
+              rotation:0,
+              x:6,
+              y:14,
+              style:{color:textColor,fontSize:'11px'}
+            }
+          });
+        }
+        lastDate = key;
+      });
+
+      const chart = Highcharts.chart(container, {
+        chart:{backgroundColor:bg,height:390,marginTop:72},
+        title:{text:null},
+        credits:{enabled:false},
+        xAxis:{
+          type:'datetime',
+          tickInterval:3*3600*1000,
+          plotLines,
+          labels:{
+            format:'{value:%H}',
+            style:{color:textColor,fontSize:'11px'}
+          },
+          gridLineWidth:1,
+          gridLineColor:gridColor,
+          lineColor:gridColor
+        },
+        yAxis:[{
+          title:{text:'°C',rotation:0,align:'high',y:-18,style:{color:textColor}},
+          labels:{style:{color:textColor}},
+          gridLineColor:gridColor
+        },{
+          title:{text:'mm',rotation:0,align:'high',y:-18,style:{color:textColor}},
+          labels:{style:{color:textColor}},
+          opposite:true,
+          min:0,
+          gridLineWidth:0
+        }],
+        legend:{
+          align:'left',
+          verticalAlign:'bottom',
+          itemStyle:{color:textColor}
+        },
+        tooltip:{
+          shared:true,
+          xDateFormat:'%A %e. %b kl. %H:%M'
+        },
+        series:[{
+          name:'Temperatur',
+          type:'spline',
+          data:tempData,
+          lineWidth:2,
+          marker:{enabled:false},
+          tooltip:{valueSuffix:' °C'},
+          yAxis:0,
+          zIndex:2
+        },{
+          name:'Nedbør',
+          type:'column',
+          data:rainData,
+          maxPointWidth:22,
+          borderWidth:0,
+          tooltip:{valueSuffix:' mm'},
+          yAxis:1,
+          zIndex:1
+        }]
+      }, chart => {
+        const sampleEvery = 2;
+        hours.forEach((h,i) => {
+          if (i % sampleEvery !== 0) return;
+          const x = chart.xAxis[0].toPixels(Date.parse(h.time));
+          const html = '<div class="forecast-chart-weather-icon">' + svg(h.weather, h.time) + '</div>';
+          chart.renderer.label(html, x - 19, chart.plotTop - 56, null, null, null, true)
+            .attr({zIndex:7})
+            .add();
+        });
+      });
+
+      Highcharts.chart(windContainer, {
+        chart:{backgroundColor:bg,height:220},
+        title:{text:null},
+        credits:{enabled:false},
+        xAxis:{
+          type:'datetime',
+          tickInterval:3*3600*1000,
+          labels:{format:'{value:%H}',style:{color:textColor,fontSize:'11px'}},
+          gridLineWidth:1,
+          gridLineColor:gridColor,
+          lineColor:gridColor
+        },
+        yAxis:{
+          title:{text:'m/s',rotation:0,align:'high',y:-12,style:{color:textColor}},
+          labels:{style:{color:textColor}},
+          min:0,
+          gridLineColor:gridColor
+        },
+        legend:{enabled:false},
+        tooltip:{xDateFormat:'%A %e. %b kl. %H:%M',valueSuffix:' m/s'},
+        series:[{
+          name:'Vind',
+          type:'spline',
+          data:windData,
+          lineWidth:2,
+          marker:{enabled:false}
+        }]
+      });
+
+      window.__forecastCharts = [chart];
+    });
+  };
+
   const render = data => {
     const content = root.querySelector('[data-forecast-content]');
     if (!content) return;
@@ -275,10 +478,17 @@
     });
     const days = summarizeDays(hours);
     const current = hours[0] || {};
+    const lat = Number(data.location?.latitude);
+    const lon = Number(data.location?.longitude);
 
     const dayName = date => new Intl.DateTimeFormat('da-DK', {weekday:'long'}).format(new Date(date + 'T12:00:00'));
     const dayDate = date => new Intl.DateTimeFormat('da-DK', {day:'2-digit', month:'short'}).format(new Date(date + 'T12:00:00'));
     const hoursForDay = date => hours.filter(h => h.time.slice(0,10) === date);
+
+    const nextRain = Number(current.rainMm || 0);
+    const rainNotice = nextRain >= 0.1
+      ? `<div class="forecast-rain-notice"><span class="forecast-rain-drop">💧</span>Der forventes <strong>${nextRain.toFixed(1)} mm</strong> nedbør frem mod kl. ${fmtHour(current.time)}.</div>`
+      : '';
 
     content.innerHTML = `
       <div class="forecast-head">
@@ -306,12 +516,25 @@
         </div>
       </section>
 
+      ${rainNotice}
+
+      <section class="forecast-meteogram-card">
+        <div class="forecast-chart-tabs">
+          <span class="active">Meteogram – de næste 3 døgn</span>
+        </div>
+        <div id="forecastMeteogram" class="forecast-meteogram"></div>
+        <div class="forecast-wind-heading">Vind</div>
+        <div id="forecastWindChart" class="forecast-wind-chart"></div>
+      </section>
+
       <section class="forecast-days-detail">
         <h3>Detaljeret dagsoversigt</h3>
 
         <div class="forecast-day-list">
           ${days.map((d, dayIndex) => {
             const dh = hoursForDay(d.date);
+            const rise = Number.isFinite(lat) && Number.isFinite(lon) ? sunTime(d.date, lat, lon, true) : null;
+            const set = Number.isFinite(lat) && Number.isFinite(lon) ? sunTime(d.date, lat, lon, false) : null;
             return `
               <article class="forecast-day-row ${dayIndex === 0 ? 'is-open' : ''}" data-day-row>
                 <button type="button" class="forecast-day-summary" data-day-toggle aria-expanded="${dayIndex === 0 ? 'true' : 'false'}">
@@ -345,6 +568,11 @@
                 </button>
 
                 <div class="forecast-day-hours" ${dayIndex === 0 ? '' : 'hidden'}>
+                  <div class="forecast-sun-info">
+                    <span class="forecast-sunrise"><b>☀</b> ${formatSunTime(rise)}</span>
+                    <span class="forecast-sunset"><b>☀</b> ${formatSunTime(set)}</span>
+                    <span>${esc(dayLengthText(rise,set))}</span>
+                  </div>
                   <div class="forecast-hours-table-wrap">
                     <table class="forecast-hours-table">
                       <thead>
@@ -393,6 +621,8 @@
         details.hidden = !isOpen;
       });
     });
+
+    renderMeteogram(hours);
   };
 
   const placeCenter = item => {
