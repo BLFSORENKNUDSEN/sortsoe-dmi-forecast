@@ -452,6 +452,38 @@
   width:38px;
   height:38px;
 }
+.forecast-chart-weather-icon-overlay{
+  position:absolute;
+  z-index:12;
+  width:40px;
+  height:40px;
+  pointer-events:none;
+}
+.forecast-chart-weather-icon-overlay .weather-svg{
+  width:40px;
+  height:40px;
+}
+.forecast-chart-weather-icon-overlay .weather-svg .cloud{
+  fill:transparent;
+  stroke:#f8fafc;
+  stroke-width:3;
+}
+.forecast-chart-weather-icon-overlay .weather-svg.sun circle{
+  fill:#f6b91a;
+  stroke:#f6b91a;
+}
+.forecast-chart-weather-icon-overlay .weather-svg.sun g,
+.forecast-chart-weather-icon-overlay .weather-svg.partly .behind{
+  stroke:#f6b91a;
+}
+.forecast-chart-weather-icon-overlay .weather-svg.moon{
+  fill:#9eb3d5;
+  stroke:#9eb3d5;
+}
+.forecast-chart-weather-icon-overlay .weather-svg.rain .precip{
+  stroke:#42a5f5;
+  stroke-width:3;
+}
 
 .forecast-sun-info{
   display:flex;
