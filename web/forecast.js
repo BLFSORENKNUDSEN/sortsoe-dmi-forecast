@@ -1,5 +1,5 @@
 (() => {
-  const FORECAST_FRONTEND_VERSION = '20261005-1';
+  const FORECAST_FRONTEND_VERSION = '20261009-1';
   console.info('Strandvejr forecast frontend', FORECAST_FRONTEND_VERSION);
   const RAW_BASE = window.SORTSOE_FORECAST_BASE_URL || 'https://raw.githubusercontent.com/BLFSORENKNUDSEN/sortsoe-dmi-forecast/main/data';
   const SORTSOE_URL = window.SORTSOE_FORECAST_URL || `${RAW_BASE}/sortsoe.json`;
@@ -115,6 +115,7 @@
       const temps = vals.map(v=>v.temperature).filter(v=>v!=null);
       const winds = vals.map(v=>v.wind).filter(v=>v!=null);
       const rains = vals.map(v=>Number(v.rainMm || 0));
+      const humidities = vals.map(v=>v.humidity).filter(v=>v!=null);
       const codes = vals.map(v=>v.weather);
       const weather = severity.find(c => codes.includes(c)) || 'clear';
       const dirs = vals.map(v=>v.windDirection).filter(v=>v!=null);
@@ -137,6 +138,7 @@
         rainMm,
         windAvg,
         windDirectionText: windDirText(meanDir),
+        humidityAvg: humidities.length ? Math.round(humidities.reduce((a,b)=>a+b,0)/humidities.length) : null,
         weather,
         weatherLabel: weatherLabel(weather),
         summary: summary + '.'
@@ -266,9 +268,6 @@
     const content = root.querySelector('[data-forecast-content]');
     if (!content) return;
 
-    // Vis kun prognosepunkter, der ligger efter det aktuelle tidspunkt
-    // i brugerens browser. Dermed forsvinder både tidligere timer og
-    // døgn, som ikke længere har fremtidige prognosepunkter.
     const now = Date.now();
     const hours = (data.hours || []).filter(h => {
       const t = Date.parse(h.time);
@@ -276,16 +275,10 @@
     });
     const days = summarizeDays(hours);
     const current = hours[0] || {};
-    const viewData = {
-      ...data,
-      hours,
-      days,
-      currentForecast: current
-    };
-    const modelPoint = data.location?.modelPoint;
-    const pointText = modelPoint
-      ? `DMI-grid ${Number(modelPoint.latitude).toFixed(2)}°, ${Number(modelPoint.longitude).toFixed(2)}°`
-      : '';
+
+    const dayName = date => new Intl.DateTimeFormat('da-DK', {weekday:'long'}).format(new Date(date + 'T12:00:00'));
+    const dayDate = date => new Intl.DateTimeFormat('da-DK', {day:'2-digit', month:'short'}).format(new Date(date + 'T12:00:00'));
+    const hoursForDay = date => hours.filter(h => h.time.slice(0,10) === date);
 
     content.innerHTML = `
       <div class="forecast-head">
@@ -295,50 +288,111 @@
         <div class="forecast-updated">Opdateret ${data.source?.generated ? fmtGenerated(data.source.generated) : '–'}</div>
       </div>
 
-      <div class="forecast-current">
-        <div class="forecast-current-icon">${svg(current.weather, current.time)}</div>
-        <div>
-          <div class="forecast-current-temp">${current.temperature == null ? '–' : Math.round(current.temperature) + '°'}</div>
-          <div class="forecast-current-label">${esc(current.weatherLabel || '')}</div>
+      <section class="forecast-current forecast-current--met">
+        <div class="forecast-current-main">
+          <div class="forecast-current-icon">${svg(current.weather, current.time)}</div>
+          <div class="forecast-current-reading">
+            <div class="forecast-current-temp">${current.temperature == null ? '–' : Number(current.temperature).toFixed(1) + '°'}</div>
+            <div class="forecast-current-label">${esc(current.weatherLabel || '')}</div>
+            <div class="forecast-current-time">${current.time ? 'Prognose kl. ' + fmtHour(current.time) : ''}</div>
+          </div>
         </div>
+
         <div class="forecast-current-facts">
-          <span>Vind <strong>${current.wind == null ? '–' : Number(current.wind).toFixed(1)} m/s ${esc(current.windDirectionText || '')}</strong></span>
-          <span>Nedbør <strong>${current.rainMm == null ? '–' : Number(current.rainMm).toFixed(1)} mm</strong></span>
-          <span>Skydække <strong>${current.cloudCover == null ? '–' : Math.round(current.cloudCover) + '%'}</strong></span>
-          <span>Tryk <strong>${current.pressure == null ? '–' : Math.round(current.pressure) + ' hPa'}</strong></span>
+          <span><b>Vind</b> ${current.wind == null ? '–' : Number(current.wind).toFixed(1) + ' m/s'} ${esc(current.windDirectionText || '')}</span>
+          <span><b>Lufttryk</b> ${current.pressure == null ? '–' : Number(current.pressure).toFixed(1) + ' hPa'}</span>
+          <span><b>Nedbør</b> ${current.rainMm == null ? '–' : Number(current.rainMm).toFixed(1) + ' mm'}</span>
+          <span><b>Luftfugtighed</b> ${current.humidity == null ? '–' : Math.round(current.humidity) + '%'}</span>
         </div>
-      </div>
+      </section>
 
-      <div class="forecast-text">${esc(weatherText(viewData))}</div>
+      <section class="forecast-days-detail">
+        <h3>Detaljeret dagsoversigt</h3>
 
-      <h3>De kommende timer</h3>
-      <div class="forecast-hours">
-        ${hours.map((h,i) => `
-          <article class="forecast-hour">
-            <div class="forecast-hour-day">${i === 0 || new Date(h.time).getDate() !== new Date(hours[i-1]?.time || h.time).getDate() ? esc(fmtDayShort(h.time)) : ''}</div>
-            <div class="forecast-hour-time">${fmtHour(h.time)}</div>
-            <div class="forecast-icon">${svg(h.weather, h.time)}</div>
-            <div class="forecast-temp">${h.temperature == null ? '–' : Math.round(h.temperature) + '°'}</div>
-            <div class="forecast-hour-label">${esc(h.weatherLabel)}</div>
-            <div class="forecast-rain">${h.rainMm == null ? '–' : Number(h.rainMm).toFixed(1)} mm</div>
-            <div class="forecast-wind">${h.wind == null ? '–' : Number(h.wind).toFixed(1)} m/s ${esc(h.windDirectionText || '')}</div>
-          </article>`).join('')}
-      </div>
+        <div class="forecast-day-list">
+          ${days.map((d, dayIndex) => {
+            const dh = hoursForDay(d.date);
+            return `
+              <article class="forecast-day-row ${dayIndex === 0 ? 'is-open' : ''}" data-day-row>
+                <button type="button" class="forecast-day-summary" data-day-toggle aria-expanded="${dayIndex === 0 ? 'true' : 'false'}">
+                  <span class="forecast-day-date">
+                    <strong>${esc(dayName(d.date))}</strong>
+                    <small>${esc(dayDate(d.date))}</small>
+                  </span>
 
-      <h3>Døgnoversigt</h3>
-      <div class="forecast-days">
-        ${days.map(d => `
-          <article class="forecast-day">
-            <div class="forecast-day-name">${fmtDay(d.date)}</div>
-            <div class="forecast-icon">${svg(d.weather, `${d.date}T12:00:00`)}</div>
-            <div class="forecast-day-temp"><strong>${d.temperatureMax == null ? '–' : Math.round(d.temperatureMax) + '°'}</strong> / ${d.temperatureMin == null ? '–' : Math.round(d.temperatureMin) + '°'}</div>
-            <div>${esc(d.weatherLabel)}</div>
-            <div>${d.rainMm == null ? '–' : Number(d.rainMm).toFixed(1)} mm</div>
-            <div>${d.windAvg == null ? '–' : Number(d.windAvg).toFixed(1)} m/s ${esc(d.windDirectionText || '')}</div>
-          </article>`).join('')}
-      </div>
+                  <span class="forecast-day-symbol">${svg(d.weather, d.date + 'T12:00:00')}</span>
 
+                  <span class="forecast-day-range">
+                    <strong>${d.temperatureMin == null ? '–' : Number(d.temperatureMin).toFixed(1) + '°'} / ${d.temperatureMax == null ? '–' : Number(d.temperatureMax).toFixed(1) + '°'}</strong>
+                  </span>
+
+                  <span class="forecast-day-metric">
+                    <small>NEDBØR</small>
+                    <strong>${d.rainMm == null ? '–' : Number(d.rainMm).toFixed(1) + ' mm'}</strong>
+                  </span>
+
+                  <span class="forecast-day-metric">
+                    <small>VIND</small>
+                    <strong>${d.windAvg == null ? '–' : Number(d.windAvg).toFixed(1) + ' m/s'} ${esc(d.windDirectionText || '')}</strong>
+                  </span>
+
+                  <span class="forecast-day-metric">
+                    <small>LUFTFUGTIGHED</small>
+                    <strong>${d.humidityAvg == null ? '–' : d.humidityAvg + '%'}</strong>
+                  </span>
+
+                  <span class="forecast-day-chevron" aria-hidden="true"></span>
+                </button>
+
+                <div class="forecast-day-hours" ${dayIndex === 0 ? '' : 'hidden'}>
+                  <div class="forecast-hours-table-wrap">
+                    <table class="forecast-hours-table">
+                      <thead>
+                        <tr>
+                          <th>Tid</th>
+                          <th>Vejr</th>
+                          <th>Temperatur</th>
+                          <th>Nedbør</th>
+                          <th>Vind</th>
+                          <th>Luftfugtighed</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${dh.map(h => `
+                          <tr>
+                            <td>${fmtHour(h.time)}</td>
+                            <td><span class="forecast-table-icon">${svg(h.weather, h.time)}</span></td>
+                            <td>${h.temperature == null ? '–' : Number(h.temperature).toFixed(1) + '°'}</td>
+                            <td>${h.rainMm == null ? '–' : Number(h.rainMm).toFixed(1) + ' mm'}</td>
+                            <td>
+                              ${h.wind == null ? '–' : Number(h.wind).toFixed(1) + ' m/s'}
+                              ${h.windDirectionText ? '<small>' + esc(h.windDirectionText) + '</small>' : ''}
+                            </td>
+                            <td>${h.humidity == null ? '–' : Math.round(h.humidity) + '%'}</td>
+                          </tr>
+                        `).join('')}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </article>
+            `;
+          }).join('')}
+        </div>
+      </section>
     `;
+
+    content.querySelectorAll('[data-day-toggle]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const row = btn.closest('[data-day-row]');
+        const details = row?.querySelector('.forecast-day-hours');
+        if (!row || !details) return;
+
+        const isOpen = row.classList.toggle('is-open');
+        btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        details.hidden = !isOpen;
+      });
+    });
   };
 
   const placeCenter = item => {
