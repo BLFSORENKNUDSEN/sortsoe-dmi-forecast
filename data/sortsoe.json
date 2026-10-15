@@ -16,8 +16,8 @@
     "collection": "harmonie_dini_sf",
     "modelRun": "2026-10-14T21:00:00Z",
     "intervalHours": 3,
-    "generated": "2026-10-14T23:27:15Z",
-    "downloadedBytes": 10946628158
+    "generated": "2026-10-15T01:48:23Z",
+    "downloadedBytes": 12798538056
   },
   "currentForecast": {
     "time": "2026-10-14T23:00+02:00",
@@ -285,6 +285,48 @@
       "pressure": 1018.7,
       "weather": "rain",
       "weatherLabel": "Regn"
+    },
+    {
+      "time": "2026-10-17T05:00+02:00",
+      "leadHours": 54,
+      "temperature": 11.4,
+      "wind": 5.5,
+      "windDirection": 317,
+      "windDirectionText": "NV",
+      "cloudCover": 100,
+      "rainMm": 0.0,
+      "humidity": 87,
+      "pressure": 1019.1,
+      "weather": "overcast",
+      "weatherLabel": "Overskyet"
+    },
+    {
+      "time": "2026-10-17T08:00+02:00",
+      "leadHours": 57,
+      "temperature": 10.4,
+      "wind": 6.0,
+      "windDirection": 322,
+      "windDirectionText": "NV",
+      "cloudCover": 98,
+      "rainMm": 0.0,
+      "humidity": 88,
+      "pressure": 1020.1,
+      "weather": "overcast",
+      "weatherLabel": "Overskyet"
+    },
+    {
+      "time": "2026-10-17T11:00+02:00",
+      "leadHours": 60,
+      "temperature": 11.8,
+      "wind": 4.8,
+      "windDirection": 328,
+      "windDirectionText": "NV",
+      "cloudCover": 0,
+      "rainMm": 0.0,
+      "humidity": 85,
+      "pressure": 1021.9,
+      "weather": "clear",
+      "weatherLabel": "Klart"
     }
   ],
   "days": [
@@ -323,14 +365,14 @@
     },
     {
       "date": "2026-10-17",
-      "temperatureMin": 11.2,
-      "temperatureMax": 11.2,
+      "temperatureMin": 10.4,
+      "temperatureMax": 11.8,
       "rainMm": 1.5,
-      "windAvg": 5.2,
+      "windAvg": 5.4,
       "windDirectionText": "NV",
       "weather": "rain",
       "weatherLabel": "Regn",
-      "summary": "Regn, 11 til 11 grader, omkring 1.5 mm nedbør, vind NV omkring 5 m/s."
+      "summary": "Regn, 10 til 12 grader, omkring 1.5 mm nedbør, vind NV omkring 5 m/s."
     }
   ]
 }
