@@ -32,10 +32,12 @@
 
     const bits = [];
     if (alert.maxWindMs != null) {
-      bits.push(`middelvind op til <strong>${fmt1(alert.maxWindMs)} m/s</strong>`);
+      const dir = alert.maxWindDirectionText ? ` fra <strong>${alert.maxWindDirectionText}</strong>` : '';
+      bits.push(`middelvind op til <strong>${fmt1(alert.maxWindMs)} m/s</strong>${dir}`);
     }
     if (alert.maxGustMs != null) {
-      bits.push(`vindstød op til <strong>${fmt1(alert.maxGustMs)} m/s</strong>`);
+      const dir = alert.maxGustDirectionText ? ` fra <strong>${alert.maxGustDirectionText}</strong>` : '';
+      bits.push(`vindstød op til <strong>${fmt1(alert.maxGustMs)} m/s</strong>${dir}`);
     }
 
     const first = fmtTime(alert.firstTime);
