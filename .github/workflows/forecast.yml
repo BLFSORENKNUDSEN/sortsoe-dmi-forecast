@@ -25,6 +25,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -51,4 +53,20 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/sortsoe.json data/grid
           git commit -m "Update Denmark STAC forecast"
-          git push
+
+          # Workflowet kan tage et stykke tid. Hvis main er blevet opdateret
+          # imens, lægges forecast-committet oven på den nyeste main før push.
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git rebase origin/main
+
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+
+            echo "Push failed because main changed again. Retrying..."
+            sleep 3
+          done
+
+          echo "Could not push forecast after 3 attempts"
+          exit 1
