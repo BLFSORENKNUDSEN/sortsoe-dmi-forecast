@@ -54,10 +54,9 @@ TILE_SIZE = 1.0
 
 WANTED = {"2t", "10si", "10wdir", "fg", "cc", "tp", "2r", "pres"}
 
-WIND_ALERT_HOURS = 72
+WIND_ALERT_HOURS = 52
 WIND_ALERT_MEAN_MS = 10.0
 WIND_ALERT_GUST_MS = 14.0
-MET_URL = "https://api.met.no/weatherapi/locationforecast/2.0/compact"
 
 
 def backoff(attempt, retry_after=None):
@@ -99,68 +98,36 @@ def get_json(url):
         return json.load(response)
 
 
-def get_met_json(lat, lon):
-    params = urllib.parse.urlencode({"lat": lat, "lon": lon})
-    url = f"{MET_URL}?{params}"
-    headers = {
-        "User-Agent": "Strandvejr.dk wind alert/1.0",
-        "Accept": "application/json",
-    }
-    request = urllib.request.Request(url, headers=headers)
-    with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
-        return json.load(response)
-
-
 def build_wind_alert(dmi_rows):
     now = datetime.now(timezone.utc)
     horizon_end = now.timestamp() + WIND_ALERT_HOURS * 3600
 
     samples = []
-    last_dmi_ts = 0.0
-
     for row in dmi_rows:
         try:
             ts = parse_dt(row["time"]).timestamp()
         except Exception:
             continue
+
         if ts < now.timestamp() or ts > horizon_end:
             continue
-        last_dmi_ts = max(last_dmi_ts, ts)
+
         samples.append({
             "time": row["time"],
             "wind": row.get("wind"),
             "gust": row.get("gust"),
-            "source": "DMI HARMONIE",
         })
-
-    try:
-        met = get_met_json(LAT, LON)
-        timeseries = met.get("properties", {}).get("timeseries", [])
-        for entry in timeseries:
-            valid = entry.get("time")
-            if not valid:
-                continue
-            ts = parse_dt(valid).timestamp()
-            if ts <= last_dmi_ts or ts < now.timestamp() or ts > horizon_end:
-                continue
-            details = entry.get("data", {}).get("instant", {}).get("details", {})
-            samples.append({
-                "time": parse_dt(valid).astimezone(TZ).isoformat(timespec="minutes"),
-                "wind": details.get("wind_speed"),
-                "gust": details.get("wind_speed_of_gust"),
-                "source": "MET Norway",
-            })
-    except Exception as exc:
-        print(f"MET Norway supplement unavailable: {exc}", file=sys.stderr)
 
     samples.sort(key=lambda item: parse_dt(item["time"]))
 
     exceeding = [
         item for item in samples
         if (
-            item.get("wind") is not None and float(item["wind"]) >= WIND_ALERT_MEAN_MS
+            item.get("wind") is not None
+            and float(item["wind"]) >= WIND_ALERT_MEAN_MS
         ) or (
-            item.get("gust") is not None and float(item["gust"]) >= WIND_ALERT_GUST_MS
+            item.get("gust") is not None
+            and float(item["gust"]) >= WIND_ALERT_GUST_MS
         )
     ]
 
@@ -183,12 +150,11 @@ def build_wind_alert(dmi_rows):
             "gustMs": WIND_ALERT_GUST_MS,
         },
         "firstTime": exceeding[0]["time"] if exceeding else None,
-        "firstSource": exceeding[0]["source"] if exceeding else None,
         "maxWindMs": round(float(max_wind_item["wind"]), 1) if max_wind_item else None,
         "maxWindTime": max_wind_item["time"] if max_wind_item else None,
         "maxGustMs": round(float(max_gust_item["gust"]), 1) if max_gust_item else None,
         "maxGustTime": max_gust_item["time"] if max_gust_item else None,
-        "sources": sorted({item["source"] for item in samples}),
+        "source": "DMI HARMONIE",
     }
 
 
