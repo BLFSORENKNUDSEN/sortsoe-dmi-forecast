@@ -116,6 +116,8 @@ def build_wind_alert(dmi_rows):
             "time": row["time"],
             "wind": row.get("wind"),
             "gust": row.get("gust"),
+            "windDirection": row.get("windDirection"),
+            "windDirectionText": row.get("windDirectionText"),
         })
 
     samples.sort(key=lambda item: parse_dt(item["time"]))
@@ -152,8 +154,12 @@ def build_wind_alert(dmi_rows):
         "firstTime": exceeding[0]["time"] if exceeding else None,
         "maxWindMs": round(float(max_wind_item["wind"]), 1) if max_wind_item else None,
         "maxWindTime": max_wind_item["time"] if max_wind_item else None,
+        "maxWindDirection": max_wind_item.get("windDirection") if max_wind_item else None,
+        "maxWindDirectionText": max_wind_item.get("windDirectionText") if max_wind_item else None,
         "maxGustMs": round(float(max_gust_item["gust"]), 1) if max_gust_item else None,
         "maxGustTime": max_gust_item["time"] if max_gust_item else None,
+        "maxGustDirection": max_gust_item.get("windDirection") if max_gust_item else None,
+        "maxGustDirectionText": max_gust_item.get("windDirectionText") if max_gust_item else None,
         "source": "DMI HARMONIE",
     }
 
