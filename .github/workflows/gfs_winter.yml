@@ -1,0 +1,75 @@
+name: Update GFS winter outlook
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "gfs/generate_winter_maps.py"
+      - "gfs/requirements.txt"
+      - ".github/workflows/gfs_winter.yml"
+  schedule:
+    - cron: "35 5,11,17,23 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sortsoe-gfs-winter-outlook
+  cancel-in-progress: true
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: gfs/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libeccodes0 libeccodes-dev
+          python -m pip install --upgrade pip
+          pip install -r gfs/requirements.txt
+
+      - name: Generate GFS winter outlook maps
+        run: python gfs/generate_winter_maps.py
+
+      - name: Commit GFS winter products
+        run: |
+          if [ -z "$(git status --porcelain -- gfs/winter_output)" ]; then
+            echo "No winter map change"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add gfs/winter_output
+          git commit -m "Update GFS winter outlook"
+
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git rebase origin/main
+
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+
+            echo "Push failed because main changed again. Retrying..."
+            sleep 3
+          done
+
+          echo "Could not push GFS winter products after 3 attempts"
+          exit 1
