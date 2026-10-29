@@ -2,7 +2,7 @@
   "source": "NOAA GFS 0.25 degree",
   "parameter": "CAPE adjusted for CIN",
   "run_utc": "2026-10-29T12:00:00+00:00",
-  "generated_utc": "2026-10-29T19:23:02.360961+00:00",
+  "generated_utc": "2026-10-29T21:53:23.540946+00:00",
   "extent": {
     "west": -12.0,
     "east": 38.0,
