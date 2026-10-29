@@ -1,0 +1,79 @@
+.winter-outlook{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.winter-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.winter-tabs button{
+  border:1px solid var(--sv-border,rgba(127,127,127,.25));
+  background:var(--sv-card-alt,rgba(127,127,127,.08));
+  color:var(--sv-text,#172033);
+  border-radius:999px;
+  padding:9px 14px;
+  font:inherit;
+  font-size:13px;
+  font-weight:700;
+  cursor:pointer
+}
+.winter-tabs button.is-active{
+  background:var(--sv-accent,#3182ce);
+  border-color:var(--sv-accent,#3182ce);
+  color:#fff
+}
+.winter-map-shell{
+  border:1px solid var(--sv-border,rgba(127,127,127,.25));
+  border-radius:var(--sv-radius-sm,12px);
+  overflow:hidden;
+  background:var(--sv-card,#fff);
+  box-shadow:var(--sv-shadow-soft,0 5px 18px rgba(0,0,0,.08))
+}
+.winter-map-meta{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:10px 14px;
+  border-bottom:1px solid var(--sv-border,rgba(127,127,127,.25));
+  color:var(--sv-text,#172033);
+  font-size:13px
+}
+.winter-map-meta>div{display:flex;gap:10px;align-items:center}
+.winter-map-meta [data-step],
+.winter-map-meta [data-uncertainty]{color:var(--sv-muted,#687386)}
+.winter-map-stage{background:#eef2f6;line-height:0}
+.winter-map-stage img{display:block;width:100%;height:auto}
+.winter-controls{
+  display:grid;
+  grid-template-columns:auto auto auto 1fr;
+  gap:8px;
+  align-items:center;
+  padding:10px 12px;
+  border-top:1px solid var(--sv-border,rgba(127,127,127,.25))
+}
+.winter-controls button{
+  width:38px;height:34px;
+  border:1px solid var(--sv-border,rgba(127,127,127,.25));
+  border-radius:8px;
+  background:var(--sv-card-alt,rgba(127,127,127,.08));
+  color:var(--sv-text,#172033);
+  cursor:pointer
+}
+.winter-controls input{width:100%}
+.winter-source{
+  margin-top:10px;
+  color:var(--sv-muted,#687386);
+  font-size:12px;
+  line-height:1.45
+}
+.winter-loading,.winter-error{
+  padding:24px;
+  border:1px solid var(--sv-border,rgba(127,127,127,.25));
+  border-radius:12px;
+  color:var(--sv-muted,#687386)
+}
+@media(max-width:650px){
+  .winter-tabs{display:grid;grid-template-columns:1fr 1fr}
+  .winter-tabs button{border-radius:9px;padding:9px 8px}
+  .winter-map-meta{align-items:flex-start;flex-direction:column;gap:4px}
+  .winter-controls{grid-template-columns:auto auto auto;grid-template-areas:"prev play next" "range range range"}
+  .winter-controls [data-prev]{grid-area:prev}
+  .winter-controls [data-play]{grid-area:play}
+  .winter-controls [data-next]{grid-area:next}
+  .winter-controls [data-slider]{grid-area:range}
+}
