@@ -118,7 +118,9 @@ def field_by_alias(datasets, aliases: tuple[str, ...], level_coord: str | None =
 def read_fields(path: Path) -> dict[str, np.ndarray]:
     datasets = cfgrib.open_datasets(path, backend_kwargs={"indexpath": ""})
 
-    t2m, ds_t2m = field_by_alias(datasets, ("t2m", "2t"))
+    t2m, ds_t2m = field_by_alias(
+        datasets, ("t2m", "2t"), "heightAboveGround", 2
+    )
     t850, ds_t850 = field_by_alias(datasets, ("t", "tmp"), "isobaricInhPa", 850)
     snow_depth, ds_snow = field_by_alias(datasets, ("sde", "snod", "sd"))
 
@@ -191,12 +193,16 @@ def base_figure():
 
 
 def temperature_cmap():
+    # Samme temperaturskala som Strandvejrs eksisterende GFS 2 m kort.
+    # Det gør farverne direkte sammenlignelige mellem de to produkter.
     colors = [
-        "#6f00a8", "#2840a6", "#0877c9", "#58b7e8", "#d8f3ff",
-        "#e9f6d0", "#d9ef65", "#f5d640", "#f6a02e", "#e4542d", "#9e174b",
+        "#b000b0", "#54169c", "#073eaa", "#0079c8", "#54b8ef",
+        "#c8e9ff", "#b8f58a", "#eff22b", "#ffb51b", "#ee4b16", "#ad0047",
     ]
-    levels = np.arange(-36, 22, 2)
-    return LinearSegmentedColormap.from_list("winter_temp", colors, N=len(levels) - 1), levels
+    levels = np.arange(-32, 36, 2)
+    return LinearSegmentedColormap.from_list(
+        "strandvejr_temperature", colors, N=len(levels) - 1
+    ), levels
 
 
 def render_temperature(fields, key: str, title: str, run, step, destination):
@@ -210,13 +216,13 @@ def render_temperature(fields, key: str, title: str, run, step, destination):
     )
     contours = axis.contour(
         fields["longitude"], fields["latitude"], values,
-        levels=np.arange(-30, 21, 5), colors="#252525",
+        levels=np.arange(-30, 36, 5), colors="#252525",
         linewidths=0.5, alpha=0.7, transform=ccrs.PlateCarree(),
     )
     axis.clabel(contours, inline=True, fontsize=6, fmt="%d")
     add_geography(axis)
     cax = figure.add_axes((0.88, 0.15, 0.022, 0.76))
-    cb = figure.colorbar(field, cax=cax, ticks=np.arange(-30, 21, 5))
+    cb = figure.colorbar(field, cax=cax, ticks=np.arange(-30, 36, 5))
     cb.set_label("°C", fontsize=8)
     cb.ax.tick_params(labelsize=7)
     add_footer(figure, title, run, step)
