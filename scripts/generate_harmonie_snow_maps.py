@@ -173,8 +173,8 @@ def snow_scale():
 
 
 def render_map(lons, lats, swe_mm, run_dt, valid_dt, lead, destination):
-    levels, mmap = snow_scale()
-    norm = BoundaryNorm(levels, mmap.N)
+    levels, cmap = snow_scale()
+    norm = BoundaryNorm(levels, cmap.N)
 
     mask = (
         (lons >= EXTENT[0]) & (lons <= EXTENT[1]) &
@@ -202,7 +202,7 @@ def render_map(lons, lats, swe_mm, run_dt, valid_dt, lead, destination):
     field = ax.tricontourf(
         x, y, z,
         levels=levels,
-        mmap=cmap,
+        cmap=cmap,
         norm=norm,
         extend="max",
         transform=ccrs.PlateCarree(),
