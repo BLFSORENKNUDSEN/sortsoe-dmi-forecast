@@ -2,22 +2,37 @@
   const root = document.querySelector('[data-winter-outlook]');
   if (!root) return;
 
-  const BASE = window.STRANDVEJR_WINTER_BASE ||
+  const GFS_BASE = window.STRANDVEJR_WINTER_BASE ||
     'https://raw.githubusercontent.com/BLFSORENKNUDSEN/sortsoe-dmi-forecast/main/gfs/winter_output';
-  const MANIFEST_URL = BASE + '/winter_manifest.json';
+
+  const DMI_SNOW_BASE = window.STRANDVEJR_DMI_SNOW_BASE ||
+    'https://raw.githubusercontent.com/BLFSORENKNUDSEN/sortsoe-dmi-forecast/main/data/dmi_snow';
 
   const state = {
-    manifest: null,
+    gfs: null,
+    dmiSnow: null,
     layer: 'temperature_2m',
     index: 0,
     timer: null
   };
 
-  const layerLabels = {
-    temperature_2m: 'Temperatur 2 m',
-    temperature_850: 'Temperatur 850 hPa',
-    precip_type: 'Nedbørstype',
-    snow_depth: 'Snedybde'
+  const layerConfigs = {
+    temperature_2m: {
+      label: 'Temperatur 2 m',
+      source: 'gfs'
+    },
+    temperature_850: {
+      label: 'Temperatur 850 hPa',
+      source: 'gfs'
+    },
+    precip_type: {
+      label: 'Nedbørstype',
+      source: 'gfs'
+    },
+    dmi_snow_depth: {
+      label: 'Snedybde DMI',
+      source: 'dmi'
+    }
   };
 
   const fmtValid = iso => new Intl.DateTimeFormat('da-DK', {
@@ -37,7 +52,24 @@
     timeZone:'Europe/Copenhagen'
   }).format(new Date(iso));
 
-  const products = () => state.manifest?.layers?.[state.layer]?.products || [];
+  const activeConfig = () => layerConfigs[state.layer];
+
+  const activeManifest = () => {
+    const cfg = activeConfig();
+    return cfg.source === 'dmi' ? state.dmiSnow : state.gfs;
+  };
+
+  const products = () => {
+    const cfg = activeConfig();
+
+    if (cfg.source === 'dmi') {
+      return state.dmiSnow?.products || [];
+    }
+
+    return state.gfs?.layers?.[state.layer]?.products || [];
+  };
+
+  const imageBase = () => activeConfig().source === 'dmi' ? DMI_SNOW_BASE : GFS_BASE;
 
   const stop = () => {
     if (state.timer) clearInterval(state.timer);
@@ -46,11 +78,39 @@
     if (btn) btn.textContent = '▶';
   };
 
+  const renderSource = () => {
+    const source = root.querySelector('[data-source]');
+    if (!source) return;
+
+    const cfg = activeConfig();
+    const manifest = activeManifest();
+
+    if (!manifest) {
+      source.textContent = '';
+      return;
+    }
+
+    if (cfg.source === 'dmi') {
+      source.innerHTML =
+        'DMI HARMONIE DINI · modelkørsel <strong>' +
+        fmtRun(manifest.run_utc) +
+        '</strong>. Højopløst korttidsprognose for snedybde.';
+    } else {
+      source.innerHTML =
+        'NOAA GFS 0,25° · modelkørsel <strong>' +
+        fmtRun(manifest.run_utc) +
+        '</strong>. Usikkerheden vokser markant længere frem i prognosen.';
+    }
+  };
+
   const renderFrame = () => {
     const list = products();
     if (!list.length) return;
+
     state.index = Math.max(0, Math.min(state.index, list.length - 1));
     const item = list[state.index];
+    const manifest = activeManifest();
+    const cfg = activeConfig();
 
     const img = root.querySelector('[data-map]');
     const slider = root.querySelector('[data-slider]');
@@ -58,39 +118,60 @@
     const step = root.querySelector('[data-step]');
     const uncertainty = root.querySelector('[data-uncertainty]');
 
-    img.src = BASE + '/' + item.file + '?v=' + encodeURIComponent(state.manifest.generated_utc || '');
-    img.alt = layerLabels[state.layer] + ' – ' + fmtValid(item.valid_utc);
+    img.src =
+      imageBase() + '/' + item.file +
+      '?v=' + encodeURIComponent(manifest?.generated_utc || '');
+
+    img.alt = cfg.label + ' – ' + fmtValid(item.valid_utc);
     slider.max = Math.max(0, list.length - 1);
     slider.value = state.index;
     label.textContent = fmtValid(item.valid_utc);
     step.textContent = '+' + item.step_hours + ' timer';
 
-    if (item.step_hours <= 120) {
+    if (cfg.source === 'dmi') {
+      const maxText = item.max_denmark_cm != null
+        ? ' · max DK ' + Number(item.max_denmark_cm).toLocaleString('da-DK', {maximumFractionDigits:1}) + ' cm'
+        : '';
+      uncertainty.textContent = 'DMI HARMONIE · 3-timers intervaller' + maxText;
+    } else if (item.step_hours <= 120) {
       uncertainty.textContent = 'Kort sigt · 6-timers intervaller';
     } else if (item.step_hours <= 240) {
       uncertainty.textContent = 'Mellemlang sigt · stigende usikkerhed';
     } else {
       uncertainty.textContent = 'Lang sigt · betydelig usikkerhed';
     }
+
+    renderSource();
   };
 
   const setLayer = layer => {
     stop();
     state.layer = layer;
     state.index = 0;
+
     root.querySelectorAll('[data-layer]').forEach(btn => {
       const active = btn.dataset.layer === layer;
       btn.classList.toggle('is-active', active);
       btn.setAttribute('aria-pressed', active ? 'true' : 'false');
     });
+
     renderFrame();
   };
 
+  const visibleLayers = () => Object.entries(layerConfigs).filter(([key, cfg]) => {
+    if (cfg.source === 'dmi') {
+      return Boolean(state.dmiSnow?.products?.length);
+    }
+    return Boolean(state.gfs?.layers?.[key]?.products?.length);
+  });
+
   const build = () => {
+    const layers = visibleLayers();
+
     root.innerHTML = `
       <div class="winter-tabs">
-        ${Object.entries(layerLabels).map(([key,label]) =>
-          `<button type="button" data-layer="${key}" aria-pressed="${key === state.layer}">${label}</button>`
+        ${layers.map(([key,cfg]) =>
+          `<button type="button" data-layer="${key}" aria-pressed="${key === state.layer}">${cfg.label}</button>`
         ).join('')}
       </div>
 
@@ -115,13 +196,8 @@
         </div>
       </div>
 
-      <div class="winter-source">
-        NOAA GFS 0,25° · modelkørsel <span data-run>–</span>.
-        Kortene viser modelberegninger. Usikkerheden vokser markant længere frem i prognosen.
-      </div>
+      <div class="winter-source" data-source></div>
     `;
-
-    root.querySelector('[data-run]').textContent = fmtRun(state.manifest.run_utc);
 
     root.querySelectorAll('[data-layer]').forEach(btn => {
       btn.addEventListener('click', () => setLayer(btn.dataset.layer));
@@ -152,6 +228,7 @@
         stop();
         return;
       }
+
       e.currentTarget.textContent = '❚❚';
       state.timer = setInterval(() => {
         const list = products();
@@ -160,22 +237,46 @@
       }, 850);
     });
 
+    if (!products().length && layers.length) {
+      state.layer = layers[0][0];
+    }
+
     setLayer(state.layer);
   };
 
   root.innerHTML = '<div class="winter-loading">Henter vinterudsigten…</div>';
 
-  fetch(MANIFEST_URL + '?v=' + Date.now(), {cache:'no-store'})
-    .then(r => {
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
-    })
-    .then(data => {
-      state.manifest = data;
-      build();
-    })
-    .catch(err => {
-      console.error('Winter outlook:', err);
-      root.innerHTML = '<div class="winter-error">Vinterudsigten kan ikke hentes lige nu.</div>';
-    });
+  Promise.allSettled([
+    fetch(GFS_BASE + '/winter_manifest.json?v=' + Date.now(), {cache:'no-store'})
+      .then(r => {
+        if (!r.ok) throw new Error('GFS HTTP ' + r.status);
+        return r.json();
+      }),
+    fetch(DMI_SNOW_BASE + '/snow_manifest.json?v=' + Date.now(), {cache:'no-store'})
+      .then(r => {
+        if (!r.ok) throw new Error('DMI snow HTTP ' + r.status);
+        return r.json();
+      })
+  ]).then(results => {
+    if (results[0].status === 'fulfilled') {
+      state.gfs = results[0].value;
+    } else {
+      console.error('GFS winter outlook:', results[0].reason);
+    }
+
+    if (results[1].status === 'fulfilled') {
+      state.dmiSnow = results[1].value;
+    } else {
+      console.warn('DMI snow depth not available yet:', results[1].reason);
+    }
+
+    if (!state.gfs && !state.dmiSnow) {
+      throw new Error('No winter forecast source available');
+    }
+
+    build();
+  }).catch(err => {
+    console.error('Winter outlook:', err);
+    root.innerHTML = '<div class="winter-error">Vinterudsigten kan ikke hentes lige nu.</div>';
+  });
 })();
