@@ -1,0 +1,128 @@
+{
+  "source": "DMI Forecast Data STAC API",
+  "model": "HARMONIE DINI surface",
+  "collection": "harmonie_dini_sf",
+  "run_utc": "2026-11-22T06:00:00+00:00",
+  "generated_utc": "2026-11-22T08:37:22.928315+00:00",
+  "interval_hours": 3,
+  "horizon_hours": 54,
+  "parameter": {
+    "title": "Snevandækvivalent",
+    "unit": "mm",
+    "grib": {
+      "shortName": "sd",
+      "name": "Snow depth water equivalent",
+      "units": "kg m**-2"
+    }
+  },
+  "products": [
+    {
+      "step_hours": 0,
+      "valid_utc": "2026-11-22T06:00:00+00:00",
+      "file": "snow_water_f000.png",
+      "max_denmark_mm": 11.2
+    },
+    {
+      "step_hours": 3,
+      "valid_utc": "2026-11-22T09:00:00+00:00",
+      "file": "snow_water_f003.png",
+      "max_denmark_mm": 11.2
+    },
+    {
+      "step_hours": 6,
+      "valid_utc": "2026-11-22T12:00:00+00:00",
+      "file": "snow_water_f006.png",
+      "max_denmark_mm": 11.0
+    },
+    {
+      "step_hours": 9,
+      "valid_utc": "2026-11-22T15:00:00+00:00",
+      "file": "snow_water_f009.png",
+      "max_denmark_mm": 11.0
+    },
+    {
+      "step_hours": 12,
+      "valid_utc": "2026-11-22T18:00:00+00:00",
+      "file": "snow_water_f012.png",
+      "max_denmark_mm": 11.0
+    },
+    {
+      "step_hours": 15,
+      "valid_utc": "2026-11-22T21:00:00+00:00",
+      "file": "snow_water_f015.png",
+      "max_denmark_mm": 11.0
+    },
+    {
+      "step_hours": 18,
+      "valid_utc": "2026-11-23T00:00:00+00:00",
+      "file": "snow_water_f018.png",
+      "max_denmark_mm": 11.0
+    },
+    {
+      "step_hours": 21,
+      "valid_utc": "2026-11-23T03:00:00+00:00",
+      "file": "snow_water_f021.png",
+      "max_denmark_mm": 11.0
+    },
+    {
+      "step_hours": 24,
+      "valid_utc": "2026-11-23T06:00:00+00:00",
+      "file": "snow_water_f024.png",
+      "max_denmark_mm": 11.8
+    },
+    {
+      "step_hours": 27,
+      "valid_utc": "2026-11-23T09:00:00+00:00",
+      "file": "snow_water_f027.png",
+      "max_denmark_mm": 12.2
+    },
+    {
+      "step_hours": 30,
+      "valid_utc": "2026-11-23T12:00:00+00:00",
+      "file": "snow_water_f030.png",
+      "max_denmark_mm": 12.5
+    },
+    {
+      "step_hours": 33,
+      "valid_utc": "2026-11-23T15:00:00+00:00",
+      "file": "snow_water_f033.png",
+      "max_denmark_mm": 12.8
+    },
+    {
+      "step_hours": 36,
+      "valid_utc": "2026-11-23T18:00:00+00:00",
+      "file": "snow_water_f036.png",
+      "max_denmark_mm": 13.5
+    },
+    {
+      "step_hours": 39,
+      "valid_utc": "2026-11-23T21:00:00+00:00",
+      "file": "snow_water_f039.png",
+      "max_denmark_mm": 13.5
+    },
+    {
+      "step_hours": 42,
+      "valid_utc": "2026-11-24T00:00:00+00:00",
+      "file": "snow_water_f042.png",
+      "max_denmark_mm": 13.2
+    },
+    {
+      "step_hours": 45,
+      "valid_utc": "2026-11-24T03:00:00+00:00",
+      "file": "snow_water_f045.png",
+      "max_denmark_mm": 13.2
+    },
+    {
+      "step_hours": 48,
+      "valid_utc": "2026-11-24T06:00:00+00:00",
+      "file": "snow_water_f048.png",
+      "max_denmark_mm": 13.2
+    },
+    {
+      "step_hours": 51,
+      "valid_utc": "2026-11-24T09:00:00+00:00",
+      "file": "snow_water_f051.png",
+      "max_denmark_mm": 13.5
+    }
+  ]
+}
