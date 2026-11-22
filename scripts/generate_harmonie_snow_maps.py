@@ -28,6 +28,7 @@ from eccodes import (
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import matplotlib.patheffects as path_effects
 from matplotlib.colors import BoundaryNorm, ListedColormap
 
 BASE = "https://opendataapi.dmi.dk/v1/forecastdata"
@@ -172,6 +173,61 @@ def snow_scale():
     return levels, ListedColormap(colors, name="dmi_snow_water_equivalent")
 
 
+
+def add_value_labels(ax, lons, lats, values):
+    """Add readable, spatially thinned snow values to the map."""
+    mask = (
+        np.isfinite(values)
+        & (values >= 1.0)
+        & (lons >= EXTENT[0]) & (lons <= EXTENT[1])
+        & (lats >= EXTENT[2]) & (lats <= EXTENT[3])
+    )
+
+    if not np.any(mask):
+        return
+
+    label_lons = lons[mask]
+    label_lats = lats[mask]
+    label_values = values[mask]
+
+    # One representative value per geographic cell keeps the native
+    # HARMONIE grid readable instead of printing thousands of numbers.
+    lon_step = 0.60
+    lat_step = 0.45
+    cells = {}
+
+    for lon, lat, value in zip(label_lons, label_lats, label_values):
+        key = (
+            int(math.floor((lon - EXTENT[0]) / lon_step)),
+            int(math.floor((lat - EXTENT[2]) / lat_step)),
+        )
+
+        current = cells.get(key)
+        # Keep the highest value in each cell. This highlights the
+        # meaningful snow maxima without creating excessive label density.
+        if current is None or value > current[2]:
+            cells[key] = (float(lon), float(lat), float(value))
+
+    for lon, lat, value in cells.values():
+        text = ax.text(
+            lon,
+            lat,
+            f"{value:.0f}",
+            transform=ccrs.PlateCarree(),
+            ha="center",
+            va="center",
+            fontsize=6.6,
+            color="#2b173a",
+            fontweight="bold",
+            zorder=8,
+        )
+        text.set_path_effects([
+            path_effects.Stroke(linewidth=2.0, foreground="white", alpha=0.9),
+            path_effects.Normal(),
+        ])
+
+
+
 def render_map(lons, lats, swe_mm, run_dt, valid_dt, lead, destination):
     levels, cmap = snow_scale()
     norm = BoundaryNorm(levels, cmap.N)
@@ -212,6 +268,9 @@ def render_map(lons, lats, swe_mm, run_dt, valid_dt, lead, destination):
     ax.add_feature(cfeature.OCEAN.with_scale("10m"), facecolor="#ffffff", zorder=0)
     ax.add_feature(cfeature.COASTLINE.with_scale("10m"), linewidth=0.7, edgecolor="#9ca3af", zorder=5)
     ax.add_feature(cfeature.BORDERS.with_scale("10m"), linewidth=0.55, edgecolor="#555555", linestyle=":", zorder=5)
+
+    # Add numeric values directly on the map, similar to DMI's own snow maps.
+    add_value_labels(ax, lons, lats, swe_mm)
 
     cax = fig.add_axes((0.89, 0.16, 0.024, 0.70))
     cb = fig.colorbar(field, cax=cax, ticks=levels)
