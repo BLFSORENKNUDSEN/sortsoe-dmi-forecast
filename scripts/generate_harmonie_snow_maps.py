@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate Denmark/Scandinavia snow depth maps from DMI HARMONIE DINI surface GRIB data."""
+"""Generate Denmark/Scandinavia snow water equivalent maps from DMI HARMONIE DINI surface GRIB data."""
 
 from __future__ import annotations
 
@@ -42,7 +42,7 @@ STEP_HOURS = 3
 MAX_FORECAST_HOURS = 54
 MIN_COMPLETE_STEPS = 45
 
-SNOW_SHORTNAMES = {"sde", "sd", "snod", "snowd", "snowdepth"}
+SNOW_SHORTNAMES = {"sdwe"}
 
 
 def get_json(url: str):
@@ -119,7 +119,7 @@ def safe_get(gid, key, default=None):
         return default
 
 
-def is_snow_depth_message(gid) -> bool:
+def is_snow_water_equivalent_message(gid) -> bool:
     short_name = str(safe_get(gid, "shortName", "")).lower()
     name = str(safe_get(gid, "name", "")).lower()
     cf_name = str(safe_get(gid, "cfName", "")).lower()
@@ -128,10 +128,10 @@ def is_snow_depth_message(gid) -> bool:
         return True
 
     combined = f"{name} {cf_name}"
-    return "snow depth" in combined or "depth of snow" in combined
+    return "snow depth water equivalent" in combined
 
 
-def read_snow_depth(path: Path):
+def read_snow_water_equivalent(path: Path):
     with path.open("rb") as fh:
         while True:
             gid = codes_grib_new_from_file(fh)
@@ -139,7 +139,7 @@ def read_snow_depth(path: Path):
                 break
 
             try:
-                if not is_snow_depth_message(gid):
+                if not is_snow_water_equivalent_message(gid):
                     continue
 
                 values = np.asarray(codes_get_array(gid, "values"), dtype=float)
@@ -147,26 +147,11 @@ def read_snow_depth(path: Path):
                 lons = np.asarray(codes_get_array(gid, "longitudes"), dtype=float)
                 units = str(safe_get(gid, "units", ""))
 
-                # Convert physical snow depth to cm.
-                # Typical GRIB snow depth is metres. If values are already cm,
-                # avoid multiplying by inspecting units.
-                unit_text = units.lower()
-                if unit_text in {"m", "metre", "metres", "meter", "meters"}:
-                    values_cm = values * 100.0
-                elif "kg m" in unit_text or "water equivalent" in unit_text:
-                    # This is not physical snow depth, so do not silently use it.
-                    raise RuntimeError(
-                        f"Found snow water equivalent instead of physical snow depth: {units}"
-                    )
-                else:
-                    # HARMONIE may expose an empty/implicit unit. Use a conservative
-                    # magnitude check: physical depth in metres is normally < 10.
-                    finite = values[np.isfinite(values)]
-                    vmax = float(np.nanmax(finite)) if finite.size else 0.0
-                    values_cm = values * 100.0 if vmax < 10 else values
+                # DMI HARMONIE sdwe is kg m**-2. Numerically this equals
+                # millimetres of liquid water equivalent.
+                swe_mm = np.maximum(values, 0.0)
 
-                values_cm = np.maximum(values_cm, 0.0)
-                return lons, lats, values_cm, {
+                return lons, lats, swe_mm, {
                     "shortName": str(safe_get(gid, "shortName", "")),
                     "name": str(safe_get(gid, "name", "")),
                     "units": units,
@@ -174,7 +159,7 @@ def read_snow_depth(path: Path):
             finally:
                 codes_release(gid)
 
-    raise RuntimeError("No physical snow depth field found in HARMONIE GRIB")
+    raise RuntimeError("No snow depth water equivalent field (sdwe) found in HARMONIE GRIB")
 
 
 def snow_scale():
@@ -184,12 +169,12 @@ def snow_scale():
         "#ae7cda", "#965aca", "#7e3bb6", "#67249d", "#531783",
         "#401069", "#2f0c51", "#21083d",
     ]
-    return levels, ListedColormap(colors, name="dmi_snow_depth")
+    return levels, ListedColormap(colors, name="dmi_snow_water_equivalent")
 
 
-def render_map(lons, lats, snow_cm, run_dt, valid_dt, lead, destination):
-    levels, cmap = snow_scale()
-    norm = BoundaryNorm(levels, cmap.N)
+def render_map(lons, lats, swe_mm, run_dt, valid_dt, lead, destination):
+    levels, mmap = snow_scale()
+    norm = BoundaryNorm(levels, mmap.N)
 
     mask = (
         (lons >= EXTENT[0]) & (lons <= EXTENT[1]) &
@@ -200,13 +185,13 @@ def render_map(lons, lats, snow_cm, run_dt, valid_dt, lead, destination):
 
     x = lons[mask]
     y = lats[mask]
-    z = snow_cm[mask]
+    z = swe_mm[mask]
 
     dk = (
         (lons >= DK_BOX[0]) & (lons <= DK_BOX[1]) &
         (lats >= DK_BOX[2]) & (lats <= DK_BOX[3])
     )
-    max_dk = float(np.nanmax(snow_cm[dk])) if np.any(dk) else float("nan")
+    max_dk = float(np.nanmax(swe_mm[dk])) if np.any(dk) else float("nan")
 
     fig = plt.figure(figsize=(9.5, 7.2), dpi=140, facecolor="white")
     ax = fig.add_axes((0.06, 0.12, 0.82, 0.80), projection=ccrs.PlateCarree())
@@ -217,7 +202,7 @@ def render_map(lons, lats, snow_cm, run_dt, valid_dt, lead, destination):
     field = ax.tricontourf(
         x, y, z,
         levels=levels,
-        cmap=cmap,
+        mmap=cmap,
         norm=norm,
         extend="max",
         transform=ccrs.PlateCarree(),
@@ -230,16 +215,16 @@ def render_map(lons, lats, snow_cm, run_dt, valid_dt, lead, destination):
 
     cax = fig.add_axes((0.89, 0.16, 0.024, 0.70))
     cb = fig.colorbar(field, cax=cax, ticks=levels)
-    cb.set_label("Snedybde (cm)", fontsize=8)
+    cb.set_label("Snevandækvivalent (mm)", fontsize=8)
     cb.ax.tick_params(labelsize=7)
 
-    fig.text(0.06, 0.955, "Snedybde (cm)", fontsize=12, weight="bold")
+    fig.text(0.06, 0.955, "Snevandækvivalent (mm)", fontsize=12, weight="bold")
     fig.text(0.06, 0.925, "DMI HARMONIE DINI · ca. 2 km", fontsize=8.5, color="#444444")
     fig.text(0.48, 0.935, f"+{lead:03d}H", fontsize=11, weight="bold", ha="center")
 
     fig.text(
         0.06, 0.885,
-        f"Max DK: {max_dk:.1f} cm" if np.isfinite(max_dk) else "Max DK: –",
+        f"Max DK: {max_dk:.1f} mm" if np.isfinite(max_dk) else "Max DK: –",
         fontsize=8.5, weight="bold",
         bbox={"boxstyle": "round,pad=0.35", "facecolor": "white", "edgecolor": "#bbbbbb"},
     )
@@ -264,7 +249,7 @@ def main():
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    for old in OUTPUT_DIR.glob("snow_depth_f*.png"):
+    for old in OUTPUT_DIR.glob("snow_water_f*.png"):
         old.unlink()
 
     products = []
@@ -284,15 +269,15 @@ def main():
             print(f"[{index}/{len(items)}] Downloading +{lead:03d}h")
             download(href, grib)
 
-            lons, lats, snow_cm, meta = read_snow_depth(grib)
+            lons, lats, swe_mm, meta = read_snow_water_equivalent(grib)
             if field_meta is None:
                 field_meta = meta
                 print(f"Snow field: {meta}")
 
-            filename = f"snow_depth_f{lead:03d}.png"
+            filename = f"snow_water_f{lead:03d}.png"
             valid_dt = parse_dt(valid)
             max_dk = render_map(
-                lons, lats, snow_cm,
+                lons, lats, swe_mm,
                 run_dt, valid_dt, lead,
                 OUTPUT_DIR / filename,
             )
@@ -301,7 +286,7 @@ def main():
                 "step_hours": lead,
                 "valid_utc": valid_dt.isoformat(),
                 "file": filename,
-                "max_denmark_cm": max_dk,
+                "max_denmark_mm": max_dk,
             })
 
     manifest = {
@@ -313,8 +298,8 @@ def main():
         "interval_hours": STEP_HOURS,
         "horizon_hours": MAX_FORECAST_HOURS,
         "parameter": {
-            "title": "Snedybde",
-            "unit": "cm",
+            "title": "Snevandækvivalent",
+            "unit": "mm",
             "grib": field_meta,
         },
         "products": products,
