@@ -30,7 +30,7 @@
       source: 'gfs'
     },
     dmi_snow_depth: {
-      label: 'Snedybde DMI',
+      label: 'Snevandækvivalent DMI',
       source: 'dmi'
     }
   };
@@ -94,7 +94,7 @@
       source.innerHTML =
         'DMI HARMONIE DINI · modelkørsel <strong>' +
         fmtRun(manifest.run_utc) +
-        '</strong>. Højopløst korttidsprognose for snedybde.';
+        '</strong>. Højopløst korttidsprognose for sneens vandækvivalent.';
     } else {
       source.innerHTML =
         'NOAA GFS 0,25° · modelkørsel <strong>' +
@@ -129,8 +129,8 @@
     step.textContent = '+' + item.step_hours + ' timer';
 
     if (cfg.source === 'dmi') {
-      const maxText = item.max_denmark_cm != null
-        ? ' · max DK ' + Number(item.max_denmark_cm).toLocaleString('da-DK', {maximumFractionDigits:1}) + ' cm'
+      const maxText = item.max_denmark_mm != null
+        ? ' · max DK ' + Number(item.max_denmark_mm).toLocaleString('da-DK', {maximumFractionDigits:1}) + ' mm'
         : '';
       uncertainty.textContent = 'DMI HARMONIE · 3-timers intervaller' + maxText;
     } else if (item.step_hours <= 120) {
@@ -267,7 +267,7 @@
     if (results[1].status === 'fulfilled') {
       state.dmiSnow = results[1].value;
     } else {
-      console.warn('DMI snow depth not available yet:', results[1].reason);
+      console.warn('DMI snow water equivalent not available yet:', results[1].reason);
     }
 
     if (!state.gfs && !state.dmiSnow) {
