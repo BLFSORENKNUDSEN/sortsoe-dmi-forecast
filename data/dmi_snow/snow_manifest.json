@@ -2,8 +2,8 @@
   "source": "DMI Forecast Data STAC API",
   "model": "HARMONIE DINI surface",
   "collection": "harmonie_dini_sf",
-  "run_utc": "2026-11-28T00:00:00+00:00",
-  "generated_utc": "2026-11-28T03:07:49.396100+00:00",
+  "run_utc": "2026-11-28T12:00:00+00:00",
+  "generated_utc": "2026-11-28T14:49:06.066433+00:00",
   "interval_hours": 3,
   "horizon_hours": 54,
   "parameter": {
@@ -18,117 +18,117 @@
   "products": [
     {
       "step_hours": 0,
-      "valid_utc": "2026-11-28T00:00:00+00:00",
+      "valid_utc": "2026-11-28T12:00:00+00:00",
       "file": "snow_water_f000.png",
       "max_denmark_mm": 14.8
     },
     {
       "step_hours": 3,
-      "valid_utc": "2026-11-28T03:00:00+00:00",
+      "valid_utc": "2026-11-28T15:00:00+00:00",
       "file": "snow_water_f003.png",
       "max_denmark_mm": 14.8
     },
     {
       "step_hours": 6,
-      "valid_utc": "2026-11-28T06:00:00+00:00",
+      "valid_utc": "2026-11-28T18:00:00+00:00",
       "file": "snow_water_f006.png",
       "max_denmark_mm": 14.8
     },
     {
       "step_hours": 9,
-      "valid_utc": "2026-11-28T09:00:00+00:00",
+      "valid_utc": "2026-11-28T21:00:00+00:00",
       "file": "snow_water_f009.png",
       "max_denmark_mm": 14.8
     },
     {
       "step_hours": 12,
-      "valid_utc": "2026-11-28T12:00:00+00:00",
+      "valid_utc": "2026-11-29T00:00:00+00:00",
       "file": "snow_water_f012.png",
-      "max_denmark_mm": 14.5
+      "max_denmark_mm": 14.8
     },
     {
       "step_hours": 15,
-      "valid_utc": "2026-11-28T15:00:00+00:00",
+      "valid_utc": "2026-11-29T03:00:00+00:00",
       "file": "snow_water_f015.png",
       "max_denmark_mm": 14.8
     },
     {
       "step_hours": 18,
-      "valid_utc": "2026-11-28T18:00:00+00:00",
+      "valid_utc": "2026-11-29T06:00:00+00:00",
       "file": "snow_water_f018.png",
       "max_denmark_mm": 14.8
     },
     {
       "step_hours": 21,
-      "valid_utc": "2026-11-28T21:00:00+00:00",
+      "valid_utc": "2026-11-29T09:00:00+00:00",
       "file": "snow_water_f021.png",
       "max_denmark_mm": 14.8
     },
     {
       "step_hours": 24,
-      "valid_utc": "2026-11-29T00:00:00+00:00",
+      "valid_utc": "2026-11-29T12:00:00+00:00",
       "file": "snow_water_f024.png",
       "max_denmark_mm": 14.8
     },
     {
       "step_hours": 27,
-      "valid_utc": "2026-11-29T03:00:00+00:00",
+      "valid_utc": "2026-11-29T15:00:00+00:00",
       "file": "snow_water_f027.png",
-      "max_denmark_mm": 14.8
+      "max_denmark_mm": 14.5
     },
     {
       "step_hours": 30,
-      "valid_utc": "2026-11-29T06:00:00+00:00",
+      "valid_utc": "2026-11-29T18:00:00+00:00",
       "file": "snow_water_f030.png",
-      "max_denmark_mm": 14.8
+      "max_denmark_mm": 14.5
     },
     {
       "step_hours": 33,
-      "valid_utc": "2026-11-29T09:00:00+00:00",
+      "valid_utc": "2026-11-29T21:00:00+00:00",
       "file": "snow_water_f033.png",
       "max_denmark_mm": 14.5
     },
     {
       "step_hours": 36,
-      "valid_utc": "2026-11-29T12:00:00+00:00",
+      "valid_utc": "2026-11-30T00:00:00+00:00",
       "file": "snow_water_f036.png",
-      "max_denmark_mm": 14.5
+      "max_denmark_mm": 15.2
     },
     {
       "step_hours": 39,
-      "valid_utc": "2026-11-29T15:00:00+00:00",
+      "valid_utc": "2026-11-30T03:00:00+00:00",
       "file": "snow_water_f039.png",
-      "max_denmark_mm": 14.5
+      "max_denmark_mm": 15.8
     },
     {
       "step_hours": 42,
-      "valid_utc": "2026-11-29T18:00:00+00:00",
+      "valid_utc": "2026-11-30T06:00:00+00:00",
       "file": "snow_water_f042.png",
-      "max_denmark_mm": 14.5
+      "max_denmark_mm": 15.8
     },
     {
       "step_hours": 45,
-      "valid_utc": "2026-11-29T21:00:00+00:00",
+      "valid_utc": "2026-11-30T09:00:00+00:00",
       "file": "snow_water_f045.png",
-      "max_denmark_mm": 14.2
+      "max_denmark_mm": 15.8
     },
     {
       "step_hours": 48,
-      "valid_utc": "2026-11-30T00:00:00+00:00",
+      "valid_utc": "2026-11-30T12:00:00+00:00",
       "file": "snow_water_f048.png",
-      "max_denmark_mm": 14.2
+      "max_denmark_mm": 15.5
     },
     {
       "step_hours": 51,
-      "valid_utc": "2026-11-30T03:00:00+00:00",
+      "valid_utc": "2026-11-30T15:00:00+00:00",
       "file": "snow_water_f051.png",
-      "max_denmark_mm": 14.5
+      "max_denmark_mm": 15.5
     },
     {
       "step_hours": 54,
-      "valid_utc": "2026-11-30T06:00:00+00:00",
+      "valid_utc": "2026-11-30T18:00:00+00:00",
       "file": "snow_water_f054.png",
-      "max_denmark_mm": 14.5
+      "max_denmark_mm": 15.5
     }
   ]
 }
